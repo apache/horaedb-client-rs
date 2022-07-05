@@ -1,0 +1,21 @@
+[package]
+name = "ceresdb-client-rs"
+version = "0.1.0"
+authors = ["CeresDB Authors <ceresdbservice@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+async-trait = "0.1.41"
+grpcio = "0.9.1"
+avro-rs = "0.13.0"
+
+[dependencies.ceresdbproto]
+git = "https://github.com/CeresDB/ceresdbproto.git"
+rev = "cbfd0135a5311d7a1d66d2d274a633c2572be29d"
+
+[dependencies.common_types]
+git = "https://github.com/CeresDB/ceresdb.git"
+rev = "f6c9a5b03e23b04e6a06c4f73756f1be9551c0f8"
+
+[lib]
+name = "ceresdb_client_rs"
