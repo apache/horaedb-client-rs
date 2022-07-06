@@ -10,6 +10,12 @@ CeresDB is a high-performance, distributed, schema-less, cloud native time-serie
 - [x] Query
 - [ ] Write
 
+
+## Contributing
+Any contribution is welcome!
+
+Read our [Contributing Guide](./CONTRIBUTING.md) and make your first contribution!
+
 ## License
 Under [Apache License 2.0](./LICENSE).
 
