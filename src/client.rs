@@ -3,12 +3,12 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use ceresdbproto::{storage::QueryRequest, storage_grpc::StorageServiceClient};
+use ceresdbproto::storage_grpc::StorageServiceClient;
 use grpcio::{CallOption, ChannelBuilder, EnvBuilder, MetadataBuilder};
 
 use crate::{
     errors::{self, Error, Result, ServerError},
-    model::{convert, row::QueriedRows},
+    model::{convert, request::QueryRequest, row::QueriedRows},
     options::{GrpcConfig, RpcOptions},
 };
 
@@ -54,7 +54,10 @@ impl Client {
 impl DbClient for Client {
     async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueriedRows> {
         let call_opt = self.make_call_option(ctx)?;
-        let mut resp = self.raw_client.query_async_opt(req, call_opt)?.await?;
+        let mut resp = self
+            .raw_client
+            .query_async_opt(&req.clone().into(), call_opt)?
+            .await?;
 
         if !errors::is_ok(resp.get_header().code) {
             let header = resp.take_header();
