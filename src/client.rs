@@ -3,12 +3,17 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use ceresdbproto::storage_grpc::StorageServiceClient;
+use ceresdbproto::{storage::WriteRequest as WriteRequestPb, storage_grpc::StorageServiceClient};
 use grpcio::{CallOption, ChannelBuilder, EnvBuilder, MetadataBuilder};
 
 use crate::{
     errors::{self, Error, Result, ServerError},
-    model::{convert, request::QueryRequest, row::QueriedRows},
+    model::{
+        convert,
+        request::QueryRequest,
+        row::QueriedRows,
+        write::{WriteOk, WriteRequest},
+    },
     options::{GrpcConfig, RpcOptions},
 };
 
@@ -21,10 +26,17 @@ pub struct RpcContext {
     pub token: String,
 }
 
+impl RpcContext {
+    pub fn new(tenant: String, token: String) -> Self {
+        Self { tenant, token }
+    }
+}
+
 /// The abstraction for client of ceresdb server.
 #[async_trait]
 pub trait DbClient {
     async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueriedRows>;
+    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteOk>;
 }
 
 /// The implementation for DbClient is based on grpc protocol.
@@ -71,8 +83,29 @@ impl DbClient for Client {
             return Ok(QueriedRows::default());
         }
 
-        convert::parse_queried_rows(&resp.schema_content, &resp.rows)
-            .map_err(|err_msg| Error::Client(err_msg))
+        convert::parse_queried_rows(&resp.schema_content, &resp.rows).map_err(Error::Client)
+    }
+
+    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteOk> {
+        let call_opt = self.make_call_option(ctx)?;
+        let req_pb: WriteRequestPb = req.clone().into();
+        println!("{:?}", req_pb);
+        let mut resp = self.raw_client.write_async_opt(&req_pb, call_opt)?.await?;
+
+        if !errors::is_ok(resp.get_header().code) {
+            let header = resp.take_header();
+            return Err(Error::Server(ServerError {
+                code: header.code,
+                msg: header.error,
+            }));
+        }
+
+        let metrics: Vec<_> = req_pb.metrics.into_iter().map(|e| e.metric).collect();
+        Ok(WriteOk {
+            metrics,
+            success: resp.success,
+            failed: resp.failed,
+        })
     }
 }
 
@@ -84,6 +117,7 @@ pub struct Builder {
     grpc_config: GrpcConfig,
 }
 
+#[allow(clippy::return_self_not_must_use)]
 impl Builder {
     pub fn new(endpoint: String) -> Self {
         Self {

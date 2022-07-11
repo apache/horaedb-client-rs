@@ -17,5 +17,9 @@ rev = "cbfd0135a5311d7a1d66d2d274a633c2572be29d"
 git = "https://github.com/CeresDB/ceresdb.git"
 rev = "f6c9a5b03e23b04e6a06c4f73756f1be9551c0f8"
 
+[dev-dependencies]
+chrono = "0.4"
+tokio = { version = "1.15", features = ["full"] }
+
 [lib]
 name = "ceresdb_client_rs"
