@@ -8,7 +8,7 @@ CeresDB is a high-performance, distributed, schema-less, cloud native time-serie
 
 ## Support features
 - [x] Query
-- [ ] Write
+- [x] Write
 
 
 ## Contributing
