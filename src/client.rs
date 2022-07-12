@@ -89,9 +89,8 @@ impl DbClient for Client {
     async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteOk> {
         let call_opt = self.make_call_option(ctx)?;
         let req_pb: WriteRequestPb = req.clone().into();
-        println!("{:?}", req_pb);
-        let mut resp = self.raw_client.write_async_opt(&req_pb, call_opt)?.await?;
 
+        let mut resp = self.raw_client.write_async_opt(&req_pb, call_opt)?.await?;
         if !errors::is_ok(resp.get_header().code) {
             let header = resp.take_header();
             return Err(Error::Server(ServerError {

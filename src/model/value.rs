@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! 'Value' used in local
+
 use ceresdbproto::storage::Value as ValuePb;
 
 pub type TimestampMs = i64;

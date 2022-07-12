@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Write request and some useful tools for it
+
 use std::collections::{BTreeMap, HashMap};
 
 use ceresdbproto::storage::{
@@ -11,11 +13,9 @@ use crate::model::value::{TimestampMs, Value};
 
 #[inline]
 fn is_key_word(name: &str) -> bool {
-    name.eq_ignore_ascii_case("tsid") && name.eq_ignore_ascii_case("timestamp")
+    name.eq_ignore_ascii_case("tsid") || name.eq_ignore_ascii_case("timestamp")
 }
 
-/// Write request
-/// You can write into multiple metrics once
 #[derive(Clone, Debug, Default)]
 pub struct WriteRequest {
     write_entries: Vec<WriteEntry>,
@@ -45,11 +45,12 @@ struct Series {
 
 #[derive(Clone, Default, Debug)]
 struct Point {
-    filed_kvs: HashMap<String, Value>,
+    fields: HashMap<String, Value>,
 }
 
-/// One time builder for `WriteMetric`
-/// Should follow this order to build:
+/// One time builder for `WriteEntry`
+///
+/// You should follow this order to build `WriteEntry`:
 /// `WriteEntryBuilder` -> `SeriesBuilder` -> `PointsBuilder` -> `WriteEntry`
 #[derive(Clone, Default)]
 pub struct WriteEntryBuilder;
@@ -86,9 +87,10 @@ impl SeriesBuilder {
         self
     }
 
-    /// You cannot set tag with name like 'timestamp' or 'tsid',
-    /// because they are keywords in ceresdb.
-    /// Normally, you can unwrap the result directly.
+    /// Set tag name and value of the write entry
+    ///
+    /// You cannot set tag with name like 'timestmp' or 'tsid',
+    /// because they are keywords in ceresdb
     #[allow(clippy::return_self_not_must_use)]
     pub fn tag(mut self, name: String, value: Value) -> Self {
         if is_key_word(&name) {
@@ -131,8 +133,10 @@ impl PointsBuilder {
         }
     }
 
-    /// Point represents fileds in one timestamp.
-    /// Field name cannot be keyword in ceresdb (same as tag name).
+    /// Set field in one point
+    ///
+    /// `Point` represents fields in one timestamp
+    /// Field name cannot be keyword in ceresdb (same as tag name)
     #[must_use]
     pub fn field_in_point(mut self, timestamp: TimestampMs, name: String, value: Value) -> Self {
         if is_key_word(&name) {
@@ -140,7 +144,7 @@ impl PointsBuilder {
         }
 
         let point = self.points.entry(timestamp).or_insert_with(Point::default);
-        let _ = point.filed_kvs.insert(name, value);
+        let _ = point.fields.insert(name, value);
         self
     }
 
@@ -160,7 +164,7 @@ impl PointsBuilder {
     }
 }
 
-/// Struct help to convert `WriteRequest` to `WriteRequestPb`
+/// Struct helps to convert `WriteRequest` to `WriteRequestPb`
 struct NameDict {
     dict: HashMap<String, u32>,
     name_idx: u32,
@@ -256,7 +260,7 @@ fn convert_entry(
     entry_pb
 }
 
-/// TODO(kamille) reduce cloning from tag_kvs
+// TODO(kamille) reduce cloning from tags
 fn convert_tags(tags_dic: &mut NameDict, tags: &HashMap<String, Value>) -> Vec<TagPb> {
     if tags.is_empty() {
         return Vec::new();
@@ -284,8 +288,8 @@ fn convert_points(fields_dic: &mut NameDict, points: &BTreeMap<i64, Point>) -> V
         let mut file_group_pb = FieldGroupPb::default();
         file_group_pb.set_timestamp(*ts);
 
-        let mut field_pbs = Vec::with_capacity(point.filed_kvs.len());
-        for (name, val) in point.filed_kvs.iter() {
+        let mut field_pbs = Vec::with_capacity(point.fields.len());
+        for (name, val) in point.fields.iter() {
             let mut field_pb = Field::default();
             field_pb.set_name_index(fields_dic.insert(name.clone()));
             field_pb.set_value(val.clone().into());
@@ -445,13 +449,13 @@ mod test {
         test_points.insert(
             ts1,
             Point {
-                filed_kvs: test_fields,
+                fields: test_fields,
             },
         );
         test_points.insert(
             ts2,
             Point {
-                filed_kvs: test_fields2,
+                fields: test_fields2,
             },
         );
 
@@ -461,7 +465,7 @@ mod test {
         let field_names = field_dic.convert_ordered();
 
         for f_group in field_groups_pb {
-            let fields_map = &test_points.get(&f_group.get_timestamp()).unwrap().filed_kvs;
+            let fields_map = &test_points.get(&f_group.get_timestamp()).unwrap().fields;
             for field_pb in f_group.fields {
                 let key_in_map = field_names[field_pb.get_name_index() as usize].as_str();
                 let val_in_map: ValuePb = fields_map.get(key_in_map).unwrap().clone().into();
