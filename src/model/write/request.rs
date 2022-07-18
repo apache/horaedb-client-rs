@@ -18,8 +18,8 @@ fn is_reserved_column_name(name: &str) -> bool {
 
 /// Builder for [`WriteRequest`].
 ///
-/// You should call [`row_builder`] to build and insert the row you want to write.
-/// And after all rows inserted, call [`build`] to get [`WriteRequest`].
+/// You should call [`row_builder`] to build and insert the row you want to
+/// write. And after all rows inserted, call [`build`] to get [`WriteRequest`].
 ///
 /// [`row_builder`]: WriteRequestBuilder::row_builder
 /// [`build`]: WriteRequestBuilder::build
@@ -36,7 +36,7 @@ impl WriteRequestBuilder {
             tags: BTreeMap::new(),
             fields: HashMap::new(),
             write_req_builder: self,
-            contains_keyword: false,
+            contains_reserved_column_name: false,
         }
     }
 
@@ -59,7 +59,7 @@ pub struct RowBuilder<'a> {
     tags: BTreeMap<String, Value>,
     fields: HashMap<String, Value>,
     write_req_builder: &'a mut WriteRequestBuilder,
-    contains_keyword: bool,
+    contains_reserved_column_name: bool,
 }
 
 impl<'a> RowBuilder<'a> {
@@ -82,7 +82,7 @@ impl<'a> RowBuilder<'a> {
     #[allow(clippy::return_self_not_must_use)]
     pub fn tag(mut self, name: String, value: Value) -> Self {
         if is_reserved_column_name(&name) {
-            self.contains_keyword = true;
+            self.contains_reserved_column_name = true;
         }
 
         let _ = self.tags.insert(name, value);
@@ -92,30 +92,26 @@ impl<'a> RowBuilder<'a> {
     #[must_use]
     pub fn field(mut self, name: String, value: Value) -> Self {
         if is_reserved_column_name(&name) {
-            self.contains_keyword = true;
+            self.contains_reserved_column_name = true;
         }
 
         let _ = self.fields.insert(name, value);
         self
     }
 
-    /// Finish building this row and append this row into the [`WriteRequestBuilder`].
+    /// Finish building this row and append this row into the
+    /// [`WriteRequestBuilder`].
     pub fn finish(self) -> Result<(), String> {
-        // valid check
-        if self.metric.is_none() {
-            return Err("Metric must be set".to_owned());
-        }
-
-        if self.timestamp.is_none() {
-            return Err("Timestamp must be set".to_owned());
-        }
-
-        if self.contains_keyword {
+        if self.contains_reserved_column_name {
             return Err("Tag or field name contains keyword in ceresdb".to_owned());
         }
 
+        if self.fields.is_empty() {
+            return Err("Fields should not be empty".to_owned());
+        }
+
         // make series key
-        let metric = self.metric.unwrap();
+        let metric = self.metric.ok_or(Err("Metric must be set".to_owned()))?;
         let series_key = make_series_key(metric.as_str(), &self.tags);
 
         // insert to write req builder
@@ -135,7 +131,10 @@ impl<'a> RowBuilder<'a> {
 
         let point = data
             .ts_fields
-            .entry(self.timestamp.unwrap())
+            .entry(
+                self.timestamp
+                    .ok_or(Err("Timestamp must be set".to_owned()))?,
+            )
             .or_insert_with(Fields::default);
         point.extend(self.fields.into_iter());
 
@@ -175,7 +174,6 @@ struct Series {
     metric: String,
     tags: BTreeMap<String, Value>,
 }
-
 
 type Fields = HashMap<String, Value>;
 
@@ -292,7 +290,10 @@ fn convert_tags(tags_dic: &mut NameDict, tags: &BTreeMap<String, Value>) -> Vec<
     tag_pbs
 }
 
-fn convert_ts_fields(fields_dic: &mut NameDict, ts_fields: &BTreeMap<TimestampMs, Fields>) -> Vec<FieldGroupPb> {
+fn convert_ts_fields(
+    fields_dic: &mut NameDict,
+    ts_fields: &BTreeMap<TimestampMs, Fields>,
+) -> Vec<FieldGroupPb> {
     if ts_fields.is_empty() {
         return Vec::new();
     }
@@ -326,7 +327,7 @@ mod test {
     use ceresdbproto::storage::Value as ValuePb;
     use chrono::Local;
 
-    use super::{convert_ts_fields, convert_tags, NameDict};
+    use super::{convert_tags, convert_ts_fields, NameDict};
     use crate::model::{
         value::Value,
         write::request::{make_series_key, WriteRequestBuilder},
@@ -561,14 +562,8 @@ mod test {
             Value::Varbinary(ts2_test_field3.1.to_vec()),
         );
 
-        test_ts_fields.insert(
-            ts1,
-                test_fields,
-        );
-        test_ts_fields.insert(
-            ts2,
-                test_fields2,
-        );
+        test_ts_fields.insert(ts1, test_fields);
+        test_ts_fields.insert(ts2, test_fields2);
         // convert and check
         let mut field_dic = NameDict::new();
         let field_groups_pb = convert_ts_fields(&mut field_dic, &test_ts_fields);
