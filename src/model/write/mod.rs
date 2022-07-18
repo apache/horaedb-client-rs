@@ -3,5 +3,5 @@
 mod request;
 mod response;
 
-pub use request::{PointsBuilder, SeriesBuilder, WriteEntry, WriteEntryBuilder, WriteRequest};
+pub use request::{WriteEntry, WriteRequest, WriteRequestBuilder};
 pub use response::WriteOk;

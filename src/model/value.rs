@@ -8,7 +8,6 @@ pub type TimestampMs = i64;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Value {
-    Null,
     /// Millisecond precision
     Timestamp(TimestampMs),
     Double(f64),
@@ -26,11 +25,31 @@ pub enum Value {
     Boolean(bool),
 }
 
+impl Value {
+    pub fn as_bytes(&self) -> Vec<u8> {
+        match &self {
+            Value::Timestamp(v) => (*v).to_le_bytes().to_vec(),
+            Value::Double(v) => (*v).to_le_bytes().to_vec(),
+            Value::Float(v) => (*v).to_le_bytes().to_vec(),
+            Value::Varbinary(v) => v.clone(),
+            Value::String(v) => v.as_bytes().to_vec(),
+            Value::UInt64(v) => (*v).to_le_bytes().to_vec(),
+            Value::UInt32(v) => (*v).to_le_bytes().to_vec(),
+            Value::UInt16(v) => (*v).to_le_bytes().to_vec(),
+            Value::UInt8(v) => (*v).to_le_bytes().to_vec(),
+            Value::Int64(v) => (*v).to_le_bytes().to_vec(),
+            Value::Int32(v) => (*v).to_le_bytes().to_vec(),
+            Value::Int16(v) => (*v).to_le_bytes().to_vec(),
+            Value::Int8(v) => (*v).to_le_bytes().to_vec(),
+            Value::Boolean(v) => (*v as u8).to_le_bytes().to_vec(),
+        }
+    }
+}
+
 impl From<Value> for ValuePb {
     fn from(val: Value) -> Self {
         let mut val_pb = ValuePb::default();
         match val {
-            Value::Null => {}
             Value::Timestamp(v) => val_pb.set_timestamp_value(v),
             Value::Double(v) => val_pb.set_float64_value(v),
             Value::Float(v) => val_pb.set_float32_value(v),

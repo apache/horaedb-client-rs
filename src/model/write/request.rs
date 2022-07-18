@@ -16,74 +16,56 @@ fn is_key_word(name: &str) -> bool {
     name.eq_ignore_ascii_case("tsid") || name.eq_ignore_ascii_case("timestamp")
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct WriteRequest {
-    write_entries: Vec<WriteEntry>,
+#[derive(Debug, Default)]
+pub struct WriteRequestBuilder {
+    data_in_metrics: HashMap<Vec<u8>, WriteEntry>,
 }
 
-impl WriteRequest {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn entry(&mut self, entry: WriteEntry) {
-        self.write_entries.push(entry);
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct WriteEntry {
-    series: Series,
-    points: BTreeMap<i64, Point>,
-}
-
-#[derive(Clone, Default, Debug)]
-struct Series {
-    metric: String,
-    tags: HashMap<String, Value>,
-}
-
-#[derive(Clone, Default, Debug)]
-struct Point {
-    fields: HashMap<String, Value>,
-}
-
-/// One time builder for `WriteEntry`
-///
-/// You should follow this order to build `WriteEntry`:
-/// `WriteEntryBuilder` -> `SeriesBuilder` -> `PointsBuilder` -> `WriteEntry`
-#[derive(Clone, Default)]
-pub struct WriteEntryBuilder;
-
-impl WriteEntryBuilder {
-    pub fn new() -> Self {
-        WriteEntryBuilder
-    }
-
-    pub fn to_series_builder(self) -> SeriesBuilder {
-        SeriesBuilder::new()
-    }
-}
-
-#[derive(Clone, Default)]
-pub struct SeriesBuilder {
-    metric: String,
-    tags: HashMap<String, Value>,
-    contains_keyword: bool,
-}
-
-impl SeriesBuilder {
-    fn new() -> Self {
-        SeriesBuilder {
-            metric: String::new(),
-            tags: HashMap::new(),
+impl WriteRequestBuilder {
+    pub fn row_builder(&mut self) -> RowBuilder {
+        RowBuilder {
+            timestamp: None,
+            metric: None,
+            tags: BTreeMap::new(),
+            fields: HashMap::new(),
+            write_req_builder: self,
             contains_keyword: false,
         }
     }
 
+    pub fn build(self) -> WriteRequest {
+        WriteRequest {
+            write_entries: self
+                .data_in_metrics
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .collect(),
+        }
+    }
+}
+
+/// Row builder for the row group
+#[derive(Debug)]
+pub struct RowBuilder<'a> {
+    timestamp: Option<i64>,
+    metric: Option<String>,
+    // tags's traver should have
+    tags: BTreeMap<String, Value>,
+    fields: HashMap<String, Value>,
+    write_req_builder: &'a mut WriteRequestBuilder,
+    contains_keyword: bool,
+}
+
+impl<'a> RowBuilder<'a> {
+    #[must_use]
+    pub fn timestamp(mut self, timestamp: i64) -> Self {
+        self.timestamp = Some(timestamp);
+        self
+    }
+
     #[must_use]
     pub fn metric(mut self, metric: String) -> Self {
-        self.metric = metric;
+        self.metric = Some(metric);
         self
     }
 
@@ -101,68 +83,106 @@ impl SeriesBuilder {
         self
     }
 
-    pub fn to_points_builder(self) -> Result<PointsBuilder, String> {
-        if self.metric.is_empty() {
-            return Err("Metric is not set".to_owned());
-        }
-
-        if self.contains_keyword {
-            return Err("Contains ceresdb keyword in tag names".to_owned());
-        }
-
-        Ok(PointsBuilder::new(Series {
-            metric: self.metric,
-            tags: self.tags,
-        }))
-    }
-}
-
-#[derive(Clone, Default)]
-pub struct PointsBuilder {
-    series: Series,
-    points: BTreeMap<i64, Point>,
-    contains_keyword: bool,
-}
-
-impl PointsBuilder {
-    fn new(series: Series) -> Self {
-        PointsBuilder {
-            series,
-            points: BTreeMap::new(),
-            contains_keyword: false,
-        }
-    }
-
-    /// Set field in one point
-    ///
-    /// `Point` represents fields in one timestamp
-    /// Field name cannot be keyword in ceresdb (same as tag name)
     #[must_use]
-    pub fn field_in_point(mut self, timestamp: TimestampMs, name: String, value: Value) -> Self {
+    pub fn field(mut self, name: String, value: Value) -> Self {
         if is_key_word(&name) {
             self.contains_keyword = true;
         }
 
-        let point = self.points.entry(timestamp).or_insert_with(Point::default);
-        let _ = point.fields.insert(name, value);
+        let _ = self.fields.insert(name, value);
         self
     }
 
-    pub fn build(self) -> Result<WriteEntry, String> {
-        if self.points.is_empty() {
-            return Err("Write nothing into metric".to_owned());
+    /// Finish building this row and append this row into the row group
+    pub fn finish(self) -> Result<(), String> {
+        // valid check
+        if self.metric.is_none() {
+            return Err("Metric must be set".to_owned());
+        }
+
+        if self.timestamp.is_none() {
+            return Err("Timestamp must be set".to_owned());
         }
 
         if self.contains_keyword {
-            return Err("Contains ceresdb keyword in field names".to_owned());
+            return Err("Tag or field name contains keyword in ceresdb".to_owned());
         }
 
-        Ok(WriteEntry {
-            series: self.series,
-            points: self.points,
-        })
+        // make series key
+        let metric = self.metric.unwrap();
+        let mut series_key = make_series_key(metric.as_str(), &self.tags);
+
+        // insert to write req builder
+        let tags = self.tags;
+        let mut data = self
+            .write_req_builder
+            .data_in_metrics
+            .entry(series_key)
+            .or_insert_with(|| {
+                let series = Series { metric, tags };
+
+                WriteEntry {
+                    series,
+                    points: BTreeMap::new(),
+                }
+            });
+
+        let point = data
+            .points
+            .entry(self.timestamp.unwrap())
+            .or_insert(Point::default());
+        point.fields.extend(self.fields.into_iter());
+
+        Ok(())
     }
 }
+
+fn make_series_key(metric: &str, tags: &BTreeMap<String, Value>) -> Vec<u8> {
+    let mut series_key = metric.as_bytes().to_vec();
+    for (name, val) in tags {
+        series_key.extend_from_slice(name.as_bytes());
+        series_key.extend_from_slice(&val.as_bytes());
+    }
+
+    series_key
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct WriteRequest {
+    write_entries: Vec<WriteEntry>,
+}
+
+impl WriteRequest {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn entry(&mut self, entry: WriteEntry) {
+        self.write_entries.push(entry);
+    }
+}
+
+#[derive(Clone, Default, Debug)]
+pub struct WriteEntry {
+    series: Series,
+    points: BTreeMap<i64, Point>,
+}
+
+#[derive(Clone, Default, Debug)]
+struct Series {
+    metric: String,
+    tags: BTreeMap<String, Value>,
+}
+
+#[derive(Clone, Default, Debug)]
+struct Point {
+    fields: HashMap<String, Value>,
+}
+
+/// One time builder for `WriteEntry`
+///
+/// You should follow this order to build `WriteEntry`:
+/// `WriteEntryBuilder` -> `SeriesBuilder` -> `PointsBuilder` -> `WriteEntry`
 
 /// Struct helps to convert `WriteRequest` to `WriteRequestPb`
 struct NameDict {
@@ -261,7 +281,7 @@ fn convert_entry(
 }
 
 // TODO(kamille) reduce cloning from tags
-fn convert_tags(tags_dic: &mut NameDict, tags: &HashMap<String, Value>) -> Vec<TagPb> {
+fn convert_tags(tags_dic: &mut NameDict, tags: &BTreeMap<String, Value>) -> Vec<TagPb> {
     if tags.is_empty() {
         return Vec::new();
     }
@@ -311,70 +331,177 @@ mod test {
     use ceresdbproto::storage::Value as ValuePb;
     use chrono::Local;
 
-    use super::{convert_points, convert_tags, NameDict, Point, WriteEntryBuilder};
-    use crate::model::value::Value;
+    use super::{convert_points, convert_tags, NameDict, Point};
+    use crate::model::{
+        value::Value,
+        write::{
+            request::{make_series_key, WriteRequestBuilder},
+            WriteRequest,
+        },
+    };
 
     #[test]
     fn test_build_wirte_metric() {
+        let ts1 = Local::now().timestamp_millis();
+        let ts2 = ts1 + 50;
+        // with same metric and tags
         let test_metric = "test_metric";
         let test_tag1 = ("test_tag1", 42);
         let test_tag2 = ("test_tag2", "test_tag_val");
         let test_field1 = ("test_field1", 42);
         let test_field2 = ("test_field2", "test_field_val");
+        let test_field3 = ("test_field3", 0.42);
+        // with same metric but different tags
+        let test_tag3 = ("test_tag1", b"binarybinary");
+        // with different metric
+        let test_metric2 = "test_metric2";
 
-        let now = Local::now().timestamp_millis();
-        let test_entry = WriteEntryBuilder::new()
-            .to_series_builder()
+        // test write request with just one row
+        let mut wreq_builder = WriteRequestBuilder::default();
+        wreq_builder
+            .row_builder()
             .metric(test_metric.to_owned())
+            .timestamp(ts1)
             .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
-            .unwrap()
             .tag(
                 test_tag2.0.to_owned(),
                 Value::String(test_tag2.1.to_owned()),
             )
-            .unwrap()
-            .to_points_builder()
-            .expect("to points builder failed")
-            .field_in_point(now, test_field1.0.to_owned(), Value::Int32(test_field1.1))
-            .unwrap()
-            .field_in_point(
-                now,
+            .field(test_field1.0.to_owned(), Value::Int32(test_field1.1))
+            .finish()
+            .unwrap();
+        wreq_builder
+            .row_builder()
+            .metric(test_metric.to_owned())
+            .timestamp(ts1)
+            .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
+            .tag(
+                test_tag2.0.to_owned(),
+                Value::String(test_tag2.1.to_owned()),
+            )
+            .field(
                 test_field2.0.to_owned(),
                 Value::String(test_field2.1.to_owned()),
             )
-            .unwrap()
-            .build()
-            .expect("build write metric failed");
+            .finish()
+            .unwrap();
+        wreq_builder
+            .row_builder()
+            .metric(test_metric.to_owned())
+            .timestamp(ts2)
+            .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
+            .tag(
+                test_tag2.0.to_owned(),
+                Value::String(test_tag2.1.to_owned()),
+            )
+            .field(test_field3.0.to_owned(), Value::Double(test_field3.1))
+            .finish()
+            .unwrap();
 
-        assert_eq!(test_entry.series.metric, test_metric);
-        assert_eq!(
-            *test_entry.series.tag_kvs.get(test_tag1.0).unwrap(),
-            Value::Int32(test_tag1.1)
-        );
-        assert_eq!(
-            *test_entry.series.tag_kvs.get(test_tag2.0).unwrap(),
-            Value::String(test_tag2.1.to_owned())
-        );
-        assert_eq!(
-            *test_entry
-                .points
-                .get(&now)
-                .unwrap()
-                .filed_kvs
-                .get(test_field1.0)
-                .unwrap(),
-            Value::Int32(test_field1.1)
-        );
-        assert_eq!(
-            *test_entry
-                .points
-                .get(&now)
-                .unwrap()
-                .filed_kvs
-                .get(test_field2.0)
-                .unwrap(),
-            Value::String(test_field2.1.to_owned())
-        );
+        wreq_builder
+            .row_builder()
+            .metric(test_metric.to_owned())
+            .timestamp(ts1)
+            .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
+            .tag(
+                test_tag2.0.to_owned(),
+                Value::String(test_tag2.1.to_owned()),
+            )
+            .tag(
+                test_tag3.0.to_owned(),
+                Value::Varbinary(test_tag3.1.to_vec()),
+            )
+            .field(test_field1.0.to_owned(), Value::Int32(test_field1.1))
+            .finish()
+            .unwrap();
+
+        wreq_builder
+            .row_builder()
+            .metric(test_metric2.to_owned())
+            .timestamp(ts1)
+            .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
+            .tag(
+                test_tag2.0.to_owned(),
+                Value::String(test_tag2.1.to_owned()),
+            )
+            .field(test_field1.0.to_owned(), Value::Int32(test_field1.1))
+            .finish()
+            .unwrap();
+        let wreq = wreq_builder.build();
+
+        // check build result
+        assert_eq!(wreq.write_entries.len(), 3);
+        let tmp_tags1 = vec![
+            (test_tag1.0.to_owned(), Value::Int32(test_tag1.1)),
+            (
+                test_tag2.0.to_owned(),
+                Value::String(test_tag2.1.to_owned()),
+            ),
+        ];
+        let tmp_tags2 = vec![
+            (test_tag1.0.to_owned(), Value::Int32(test_tag1.1)),
+            (
+                test_tag2.0.to_owned(),
+                Value::String(test_tag2.1.to_owned()),
+            ),
+            (
+                test_tag3.0.to_owned(),
+                Value::Varbinary(test_tag3.1.to_vec()),
+            ),
+        ];
+        let mut tags1 = BTreeMap::new();
+        let mut tags2 = BTreeMap::new();
+        tags1.extend(tmp_tags1.into_iter());
+        tags2.extend(tmp_tags2.into_iter());
+        let mut series_key1 = make_series_key(test_metric, &tags1);
+        let mut series_key2 = make_series_key(test_metric, &tags2);
+        let mut series_key3 = make_series_key(test_metric2, &tags1);
+        for entry in &wreq.write_entries {
+            let series_key = make_series_key(entry.series.metric.as_str(), &entry.series.tags);
+            if series_key == series_key1 {
+                assert_eq!(
+                    *entry
+                        .points
+                        .get(&ts1)
+                        .unwrap()
+                        .fields
+                        .get(test_field1.0)
+                        .unwrap(),
+                    Value::Int32(test_field1.1)
+                );
+                assert_eq!(
+                    *entry
+                        .points
+                        .get(&ts1)
+                        .unwrap()
+                        .fields
+                        .get(test_field2.0)
+                        .unwrap(),
+                    Value::String(test_field2.1.to_owned())
+                );
+                assert_eq!(
+                    *entry
+                        .points
+                        .get(&ts2)
+                        .unwrap()
+                        .fields
+                        .get(test_field3.0)
+                        .unwrap(),
+                    Value::Double(test_field3.1)
+                );
+            } else if series_key == series_key2 || series_key == series_key3 {
+                assert_eq!(
+                    *entry
+                        .points
+                        .get(&ts1)
+                        .unwrap()
+                        .fields
+                        .get(test_field1.0)
+                        .unwrap(),
+                    Value::Int32(test_field1.1)
+                );
+            }
+        }
     }
 
     #[test]
@@ -382,7 +509,7 @@ mod test {
         let test_tag1 = ("tag_name1", "tag_val1");
         let test_tag2 = ("tag_name2", 42);
         let test_tag3 = ("tag_name3", b"wewraewfsfjkldsafjkdlsa");
-        let mut test_tags = HashMap::new();
+        let mut test_tags = BTreeMap::new();
         test_tags.insert(
             test_tag1.0.to_owned(),
             Value::String(test_tag1.1.to_owned()),
