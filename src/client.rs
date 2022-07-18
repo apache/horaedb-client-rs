@@ -12,7 +12,7 @@ use crate::{
         convert,
         request::QueryRequest,
         row::QueriedRows,
-        write::{WriteOk, WriteRequest},
+        write::{WriteRequest, WriteResult},
     },
     options::{GrpcConfig, RpcOptions},
 };
@@ -36,7 +36,7 @@ impl RpcContext {
 #[async_trait]
 pub trait DbClient {
     async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueriedRows>;
-    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteOk>;
+    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResult>;
 }
 
 /// The implementation for DbClient is based on grpc protocol.
@@ -86,7 +86,7 @@ impl DbClient for Client {
         convert::parse_queried_rows(&resp.schema_content, &resp.rows).map_err(Error::Client)
     }
 
-    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteOk> {
+    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResult> {
         let call_opt = self.make_call_option(ctx)?;
         let req_pb: WriteRequestPb = req.clone().into();
 
@@ -100,7 +100,7 @@ impl DbClient for Client {
         }
 
         let metrics: Vec<_> = req_pb.metrics.into_iter().map(|e| e.metric).collect();
-        Ok(WriteOk {
+        Ok(WriteResult {
             metrics,
             success: resp.success,
             failed: resp.failed,

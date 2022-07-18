@@ -1,6 +1,6 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-//! 'Value' used in local
+//! 'Value' used in local.
 
 use ceresdbproto::storage::Value as ValuePb;
 
@@ -8,7 +8,6 @@ pub type TimestampMs = i64;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Value {
-    /// Millisecond precision
     Timestamp(TimestampMs),
     Double(f64),
     Float(f32),

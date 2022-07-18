@@ -4,4 +4,4 @@ mod request;
 mod response;
 
 pub use request::{WriteEntry, WriteRequest, WriteRequestBuilder};
-pub use response::WriteOk;
+pub use response::WriteResult;

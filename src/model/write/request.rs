@@ -1,6 +1,6 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-//! Write request and some useful tools for it
+//! Write request and some useful tools for it.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -12,10 +12,17 @@ use ceresdbproto::storage::{
 use crate::model::value::{TimestampMs, Value};
 
 #[inline]
-fn is_key_word(name: &str) -> bool {
+fn is_reserved_column_name(name: &str) -> bool {
     name.eq_ignore_ascii_case("tsid") || name.eq_ignore_ascii_case("timestamp")
 }
 
+/// Builder for [`WriteRequest`].
+///
+/// You should call [`row_builder`] to build and insert the row you want to write.
+/// And after all rows inserted, call [`build`] to get [`WriteRequest`].
+///
+/// [`row_builder`]: WriteRequestBuilder::row_builder
+/// [`build`]: WriteRequestBuilder::build
 #[derive(Debug, Default)]
 pub struct WriteRequestBuilder {
     data_in_metrics: HashMap<Vec<u8>, WriteEntry>,
@@ -44,12 +51,11 @@ impl WriteRequestBuilder {
     }
 }
 
-/// Row builder for the row group
 #[derive(Debug)]
 pub struct RowBuilder<'a> {
     timestamp: Option<i64>,
     metric: Option<String>,
-    // tags's traver should have
+    // tags' traversing should have definite order
     tags: BTreeMap<String, Value>,
     fields: HashMap<String, Value>,
     write_req_builder: &'a mut WriteRequestBuilder,
@@ -69,13 +75,13 @@ impl<'a> RowBuilder<'a> {
         self
     }
 
-    /// Set tag name and value of the write entry
+    /// Set tag name and value of the write entry.
     ///
-    /// You cannot set tag with name like 'timestmp' or 'tsid',
-    /// because they are keywords in ceresdb
+    /// You cannot set tag with name like 'timestamp' or 'tsid',
+    /// because they are keywords in ceresdb.
     #[allow(clippy::return_self_not_must_use)]
     pub fn tag(mut self, name: String, value: Value) -> Self {
-        if is_key_word(&name) {
+        if is_reserved_column_name(&name) {
             self.contains_keyword = true;
         }
 
@@ -85,7 +91,7 @@ impl<'a> RowBuilder<'a> {
 
     #[must_use]
     pub fn field(mut self, name: String, value: Value) -> Self {
-        if is_key_word(&name) {
+        if is_reserved_column_name(&name) {
             self.contains_keyword = true;
         }
 
@@ -93,7 +99,7 @@ impl<'a> RowBuilder<'a> {
         self
     }
 
-    /// Finish building this row and append this row into the row group
+    /// Finish building this row and append this row into the [`WriteRequestBuilder`].
     pub fn finish(self) -> Result<(), String> {
         // valid check
         if self.metric.is_none() {
@@ -110,11 +116,11 @@ impl<'a> RowBuilder<'a> {
 
         // make series key
         let metric = self.metric.unwrap();
-        let mut series_key = make_series_key(metric.as_str(), &self.tags);
+        let series_key = make_series_key(metric.as_str(), &self.tags);
 
         // insert to write req builder
         let tags = self.tags;
-        let mut data = self
+        let data = self
             .write_req_builder
             .data_in_metrics
             .entry(series_key)
@@ -130,7 +136,7 @@ impl<'a> RowBuilder<'a> {
         let point = data
             .points
             .entry(self.timestamp.unwrap())
-            .or_insert(Point::default());
+            .or_insert_with(Point::default);
         point.fields.extend(self.fields.into_iter());
 
         Ok(())
@@ -147,16 +153,12 @@ fn make_series_key(metric: &str, tags: &BTreeMap<String, Value>) -> Vec<u8> {
     series_key
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct WriteRequest {
     write_entries: Vec<WriteEntry>,
 }
 
 impl WriteRequest {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     pub fn entry(&mut self, entry: WriteEntry) {
         self.write_entries.push(entry);
     }
@@ -165,7 +167,7 @@ impl WriteRequest {
 #[derive(Clone, Default, Debug)]
 pub struct WriteEntry {
     series: Series,
-    points: BTreeMap<i64, Point>,
+    points: BTreeMap<TimestampMs, Point>,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -179,12 +181,7 @@ struct Point {
     fields: HashMap<String, Value>,
 }
 
-/// One time builder for `WriteEntry`
-///
-/// You should follow this order to build `WriteEntry`:
-/// `WriteEntryBuilder` -> `SeriesBuilder` -> `PointsBuilder` -> `WriteEntry`
-
-/// Struct helps to convert `WriteRequest` to `WriteRequestPb`
+/// Struct helps to convert [`WriteRequest`] to [`WriteRequestPb`].
 struct NameDict {
     dict: HashMap<String, u32>,
     name_idx: u32,
@@ -280,7 +277,7 @@ fn convert_entry(
     entry_pb
 }
 
-// TODO(kamille) reduce cloning from tags
+// TODO(kamille) reduce cloning from tags.
 fn convert_tags(tags_dic: &mut NameDict, tags: &BTreeMap<String, Value>) -> Vec<TagPb> {
     if tags.is_empty() {
         return Vec::new();
@@ -334,10 +331,7 @@ mod test {
     use super::{convert_points, convert_tags, NameDict, Point};
     use crate::model::{
         value::Value,
-        write::{
-            request::{make_series_key, WriteRequestBuilder},
-            WriteRequest,
-        },
+        write::request::{make_series_key, WriteRequestBuilder},
     };
 
     #[test]
@@ -453,9 +447,9 @@ mod test {
         let mut tags2 = BTreeMap::new();
         tags1.extend(tmp_tags1.into_iter());
         tags2.extend(tmp_tags2.into_iter());
-        let mut series_key1 = make_series_key(test_metric, &tags1);
-        let mut series_key2 = make_series_key(test_metric, &tags2);
-        let mut series_key3 = make_series_key(test_metric2, &tags1);
+        let series_key1 = make_series_key(test_metric, &tags1);
+        let series_key2 = make_series_key(test_metric, &tags2);
+        let series_key3 = make_series_key(test_metric2, &tags1);
         for entry in &wreq.write_entries {
             let series_key = make_series_key(entry.series.metric.as_str(), &entry.series.tags);
             if series_key == series_key1 {
