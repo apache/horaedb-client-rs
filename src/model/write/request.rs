@@ -129,15 +129,15 @@ impl<'a> RowBuilder<'a> {
 
                 WriteEntry {
                     series,
-                    points: BTreeMap::new(),
+                    ts_fields: BTreeMap::new(),
                 }
             });
 
         let point = data
-            .points
+            .ts_fields
             .entry(self.timestamp.unwrap())
-            .or_insert_with(Point::default);
-        point.fields.extend(self.fields.into_iter());
+            .or_insert_with(Fields::default);
+        point.extend(self.fields.into_iter());
 
         Ok(())
     }
@@ -167,7 +167,7 @@ impl WriteRequest {
 #[derive(Clone, Default, Debug)]
 pub struct WriteEntry {
     series: Series,
-    points: BTreeMap<TimestampMs, Point>,
+    ts_fields: BTreeMap<TimestampMs, Fields>,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -176,10 +176,8 @@ struct Series {
     tags: BTreeMap<String, Value>,
 }
 
-#[derive(Clone, Default, Debug)]
-struct Point {
-    fields: HashMap<String, Value>,
-}
+
+type Fields = HashMap<String, Value>;
 
 /// Struct helps to convert [`WriteRequest`] to [`WriteRequestPb`].
 struct NameDict {
@@ -272,7 +270,7 @@ fn convert_entry(
 ) -> WriteEntryPb {
     let mut entry_pb = WriteEntryPb::default();
     entry_pb.set_tags(convert_tags(tags_dic, &entry.series.tags).into());
-    entry_pb.set_field_groups(convert_points(fields_dic, &entry.points).into());
+    entry_pb.set_field_groups(convert_ts_fields(fields_dic, &entry.ts_fields).into());
 
     entry_pb
 }
@@ -294,19 +292,19 @@ fn convert_tags(tags_dic: &mut NameDict, tags: &BTreeMap<String, Value>) -> Vec<
     tag_pbs
 }
 
-fn convert_points(fields_dic: &mut NameDict, points: &BTreeMap<i64, Point>) -> Vec<FieldGroupPb> {
-    if points.is_empty() {
+fn convert_ts_fields(fields_dic: &mut NameDict, ts_fields: &BTreeMap<TimestampMs, Fields>) -> Vec<FieldGroupPb> {
+    if ts_fields.is_empty() {
         return Vec::new();
     }
 
-    let mut field_group_pbs = Vec::with_capacity(points.len());
-    for (ts, point) in points {
-        // ts + point will be converted to file group in pb
+    let mut field_group_pbs = Vec::with_capacity(ts_fields.len());
+    for (ts, fields) in ts_fields {
+        // ts + fields will be converted to file group in pb
         let mut file_group_pb = FieldGroupPb::default();
         file_group_pb.set_timestamp(*ts);
 
-        let mut field_pbs = Vec::with_capacity(point.fields.len());
-        for (name, val) in point.fields.iter() {
+        let mut field_pbs = Vec::with_capacity(fields.len());
+        for (name, val) in fields.iter() {
             let mut field_pb = Field::default();
             field_pb.set_name_index(fields_dic.insert(name.clone()));
             field_pb.set_value(val.clone().into());
@@ -328,7 +326,7 @@ mod test {
     use ceresdbproto::storage::Value as ValuePb;
     use chrono::Local;
 
-    use super::{convert_points, convert_tags, NameDict, Point};
+    use super::{convert_ts_fields, convert_tags, NameDict};
     use crate::model::{
         value::Value,
         write::request::{make_series_key, WriteRequestBuilder},
@@ -455,30 +453,27 @@ mod test {
             if series_key == series_key1 {
                 assert_eq!(
                     *entry
-                        .points
+                        .ts_fields
                         .get(&ts1)
                         .unwrap()
-                        .fields
                         .get(test_field1.0)
                         .unwrap(),
                     Value::Int32(test_field1.1)
                 );
                 assert_eq!(
                     *entry
-                        .points
+                        .ts_fields
                         .get(&ts1)
                         .unwrap()
-                        .fields
                         .get(test_field2.0)
                         .unwrap(),
                     Value::String(test_field2.1.to_owned())
                 );
                 assert_eq!(
                     *entry
-                        .points
+                        .ts_fields
                         .get(&ts2)
                         .unwrap()
-                        .fields
                         .get(test_field3.0)
                         .unwrap(),
                     Value::Double(test_field3.1)
@@ -486,10 +481,9 @@ mod test {
             } else if series_key == series_key2 || series_key == series_key3 {
                 assert_eq!(
                     *entry
-                        .points
+                        .ts_fields
                         .get(&ts1)
                         .unwrap()
-                        .fields
                         .get(test_field1.0)
                         .unwrap(),
                     Value::Int32(test_field1.1)
@@ -529,7 +523,7 @@ mod test {
     #[test]
     fn test_convert_points() {
         // test points
-        let mut test_points = BTreeMap::new();
+        let mut test_ts_fields = BTreeMap::new();
 
         let ts1 = Local::now().timestamp_millis();
         let ts1_test_field1 = ("field_name1", "field_val1");
@@ -567,26 +561,21 @@ mod test {
             Value::Varbinary(ts2_test_field3.1.to_vec()),
         );
 
-        test_points.insert(
+        test_ts_fields.insert(
             ts1,
-            Point {
-                fields: test_fields,
-            },
+                test_fields,
         );
-        test_points.insert(
+        test_ts_fields.insert(
             ts2,
-            Point {
-                fields: test_fields2,
-            },
+                test_fields2,
         );
-
         // convert and check
         let mut field_dic = NameDict::new();
-        let field_groups_pb = convert_points(&mut field_dic, &test_points);
+        let field_groups_pb = convert_ts_fields(&mut field_dic, &test_ts_fields);
         let field_names = field_dic.convert_ordered();
 
         for f_group in field_groups_pb {
-            let fields_map = &test_points.get(&f_group.get_timestamp()).unwrap().fields;
+            let fields_map = &test_ts_fields.get(&f_group.get_timestamp()).unwrap();
             for field_pb in f_group.fields {
                 let key_in_map = field_names[field_pb.get_name_index() as usize].as_str();
                 let val_in_map: ValuePb = fields_map.get(key_in_map).unwrap().clone().into();
