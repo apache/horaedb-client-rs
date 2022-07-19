@@ -340,14 +340,11 @@ mod test {
     use ceresdbproto::storage::Value as ValuePb;
     use chrono::Local;
 
-    use super::{convert_tags, convert_ts_fields, NameDict};
-    use crate::model::{
-        value::Value,
-        write::request::{make_series_key, WriteRequestBuilder},
-    };
+    use super::{convert_tags, convert_ts_fields, make_series_key, NameDict, WriteRequestBuilder};
+    use crate::model::value::Value;
 
     #[test]
-    fn test_build_wirte_metric() {
+    fn test_build_write_metric() {
         let ts1 = Local::now().timestamp_millis();
         let ts2 = ts1 + 50;
         // with same metric and tags
@@ -522,10 +519,10 @@ mod test {
             Value::Varbinary(test_tag3.1.to_vec()),
         );
 
-        let mut tag_dict = NameDict::new();
+        let mut tags_dict = NameDict::new();
 
-        let tags_pb = convert_tags(&mut tag_dict, test_tags.clone());
-        let tag_names = tag_dict.convert_ordered();
+        let tags_pb = convert_tags(&mut tags_dict, test_tags.clone());
+        let tag_names = tags_dict.convert_ordered();
 
         for tag_pb in tags_pb {
             let name_idx = tag_pb.get_name_index() as usize;
@@ -577,9 +574,9 @@ mod test {
         test_ts_fields.insert(ts1, test_fields);
         test_ts_fields.insert(ts2, test_fields2);
         // convert and check
-        let mut field_dic = NameDict::new();
-        let field_groups_pb = convert_ts_fields(&mut field_dic, test_ts_fields.clone());
-        let field_names = field_dic.convert_ordered();
+        let mut fields_dict = NameDict::new();
+        let field_groups_pb = convert_ts_fields(&mut fields_dict, test_ts_fields.clone());
+        let field_names = fields_dict.convert_ordered();
 
         for f_group in field_groups_pb {
             let fields_map = test_ts_fields.get(&f_group.get_timestamp()).unwrap();
