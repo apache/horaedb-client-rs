@@ -20,7 +20,7 @@ const TSID: &str = "tsid";
 const TIMESTAMP: &str = "timestamp";
 
 #[inline]
-fn is_reserved_column_name(name: &str) -> bool {
+pub fn is_reserved_column_name(name: &str) -> bool {
     name.eq_ignore_ascii_case(TSID) || name.eq_ignore_ascii_case(TIMESTAMP)
 }
 
@@ -276,19 +276,18 @@ fn convert_one_write_metric(
 }
 
 fn convert_entry(
-    tags_dic: &mut NameDict,
-    fields_dic: &mut NameDict,
+    tags_dict: &mut NameDict,
+    fields_dict: &mut NameDict,
     entry: WriteEntry,
 ) -> WriteEntryPb {
     let mut entry_pb = WriteEntryPb::default();
-    entry_pb.set_tags(convert_tags(tags_dic, entry.series.tags).into());
-    entry_pb.set_field_groups(convert_ts_fields(fields_dic, entry.ts_fields).into());
+    entry_pb.set_tags(convert_tags(tags_dict, entry.series.tags).into());
+    entry_pb.set_field_groups(convert_ts_fields(fields_dict, entry.ts_fields).into());
 
     entry_pb
 }
 
-// TODO(kamille) reduce cloning from tags.
-fn convert_tags(tags_dic: &mut NameDict, tags: BTreeMap<String, Value>) -> Vec<TagPb> {
+fn convert_tags(tags_dict: &mut NameDict, tags: BTreeMap<String, Value>) -> Vec<TagPb> {
     if tags.is_empty() {
         return Vec::new();
     }
@@ -296,7 +295,7 @@ fn convert_tags(tags_dic: &mut NameDict, tags: BTreeMap<String, Value>) -> Vec<T
     let mut tag_pbs = Vec::with_capacity(tags.len());
     for (name, val) in tags {
         let mut tag_pb = TagPb::default();
-        tag_pb.set_name_index(tags_dic.insert(name));
+        tag_pb.set_name_index(tags_dict.insert(name));
         tag_pb.set_value(val.into());
         tag_pbs.push(tag_pb);
     }
@@ -305,7 +304,7 @@ fn convert_tags(tags_dic: &mut NameDict, tags: BTreeMap<String, Value>) -> Vec<T
 }
 
 fn convert_ts_fields(
-    fields_dic: &mut NameDict,
+    fields_dict: &mut NameDict,
     ts_fields: BTreeMap<TimestampMs, Fields>,
 ) -> Vec<FieldGroupPb> {
     if ts_fields.is_empty() {
@@ -321,7 +320,7 @@ fn convert_ts_fields(
         let mut field_pbs = Vec::with_capacity(fields.len());
         for (name, val) in fields {
             let mut field_pb = Field::default();
-            field_pb.set_name_index(fields_dic.insert(name));
+            field_pb.set_name_index(fields_dict.insert(name));
             field_pb.set_value(val.into());
             field_pbs.push(field_pb);
         }
@@ -523,10 +522,10 @@ mod test {
             Value::Varbinary(test_tag3.1.to_vec()),
         );
 
-        let mut tag_dic = NameDict::new();
+        let mut tag_dict = NameDict::new();
 
-        let tags_pb = convert_tags(&mut tag_dic, test_tags.clone());
-        let tag_names = tag_dic.convert_ordered();
+        let tags_pb = convert_tags(&mut tag_dict, test_tags.clone());
+        let tag_names = tag_dict.convert_ordered();
 
         for tag_pb in tags_pb {
             let name_idx = tag_pb.get_name_index() as usize;
