@@ -67,7 +67,6 @@ impl DbClient for Client {
             }));
         }
 
-        // TODO: maybe add a flag in protos to indicate if schema exists
         if resp.schema_content.is_empty() {
             let mut r = QueryResponse::default();
             r.affected_rows = resp.affected_rows;
