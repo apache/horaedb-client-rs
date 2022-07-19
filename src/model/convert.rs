@@ -1,9 +1,11 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
 use avro_rs::{types::Value, Schema as AvroSchema};
-use common_types::{bytes::Bytes, datum::Datum, string::StringBytes, time::Timestamp};
 
-use crate::model::row::{QueryResponse, Row, Schema};
+use crate::model::{
+    row::{QueryResponse, Row, Schema},
+    Bytes, Datum, StringBytes, Timestamp,
+};
 
 /// Convert the avro `Value` into the `Datum`.
 ///
