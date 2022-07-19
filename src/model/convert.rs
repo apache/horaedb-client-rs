@@ -3,7 +3,7 @@
 use avro_rs::{types::Value, Schema as AvroSchema};
 use common_types::{bytes::Bytes, datum::Datum, string::StringBytes, time::Timestamp};
 
-use crate::model::row::{QueriedRows, Row, Schema};
+use crate::model::row::{QueryResponse, Row, Schema};
 
 /// Convert the avro `Value` into the `Datum`.
 ///
@@ -56,11 +56,11 @@ fn parse_one_row(schema: &AvroSchema, mut raw: &[u8], row: &mut Row) -> Result<(
 
 /// Parse the raw rows according to the schema and the (de)serialization
 /// protocol is avro.
-pub fn parse_queried_rows(raw_schema: &str, rows: &[Vec<u8>]) -> Result<QueriedRows, String> {
+pub fn parse_queried_rows(raw_schema: &str, rows: &[Vec<u8>]) -> Result<QueryResponse, String> {
     let avro_schema = AvroSchema::parse_str(raw_schema).map_err(|e| e.to_string())?;
     let schema = Schema::try_from(&avro_schema)?;
 
-    let mut queried_rows = QueriedRows::with_capacity(schema, rows.len());
+    let mut queried_rows = QueryResponse::with_capacity(schema, rows.len());
     for raw_row in rows {
         let mut row = Row::with_column_num(queried_rows.schema.num_cols());
         parse_one_row(&avro_schema, &*raw_row, &mut row)?;
