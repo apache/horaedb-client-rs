@@ -8,7 +8,11 @@ use grpcio::{CallOption, ChannelBuilder, EnvBuilder, MetadataBuilder};
 
 use crate::{
     errors::{self, Error, Result, ServerError},
-    model::{convert, request::QueryRequest, row::QueriedRows},
+    model::{
+        convert,
+        request::QueryRequest,
+        row::{QueriedRows, QueryResponse},
+    },
     options::{GrpcConfig, RpcOptions},
 };
 
@@ -24,7 +28,7 @@ pub struct RpcContext {
 /// The abstraction for client of ceresdb server.
 #[async_trait]
 pub trait DbClient {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueriedRows>;
+    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse>;
 }
 
 /// The implementation for DbClient is based on grpc protocol.
@@ -52,7 +56,7 @@ impl Client {
 // TODO(kamille) may be better to rename `DbClient` and `Client`
 #[async_trait]
 impl DbClient for Client {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueriedRows> {
+    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse> {
         let call_opt = self.make_call_option(ctx)?;
         let mut resp = self
             .raw_client
@@ -67,12 +71,18 @@ impl DbClient for Client {
             }));
         }
 
+        // TODO: maybe add a flag in protos to indicate if schema exists
+        if resp.schema_content.is_empty() {
+            return Ok(QueryResponse::AffectedRows(resp.affected_rows));
+        }
+
         if resp.rows.is_empty() {
-            return Ok(QueriedRows::default());
+            return Ok(QueryResponse::Rows(QueriedRows::default()));
         }
 
         convert::parse_queried_rows(&resp.schema_content, &resp.rows)
             .map_err(|err_msg| Error::Client(err_msg))
+            .map(QueryResponse::Rows)
     }
 }
 

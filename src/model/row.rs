@@ -145,3 +145,9 @@ impl QueriedRows {
         }
     }
 }
+
+#[derive(Clone, Debug)]
+pub enum QueryResponse {
+    Rows(QueriedRows),
+    AffectedRows(u32),
+}
