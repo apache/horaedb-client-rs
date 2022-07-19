@@ -146,4 +146,8 @@ impl QueryResponse {
             rows: Vec::with_capacity(n),
         }
     }
+
+    pub fn has_schema(&self) -> bool {
+        !self.schema.column_schemas.is_empty()
+    }
 }
