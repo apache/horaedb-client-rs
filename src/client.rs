@@ -11,7 +11,7 @@ use crate::{
     model::{
         convert,
         request::QueryRequest,
-        row::QueriedRows,
+        row::QueryResponse,
         write::{WriteRequest, WriteResult},
     },
     options::{GrpcConfig, RpcOptions},
@@ -35,7 +35,7 @@ impl RpcContext {
 /// The abstraction for client of ceresdb server.
 #[async_trait]
 pub trait DbClient {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueriedRows>;
+    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse>;
     async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResult>;
 }
 
@@ -63,8 +63,9 @@ impl Client {
 
 // TODO(kamille) may be better to rename `DbClient` and `Client`
 #[async_trait]
+#[allow(clippy::field_reassign_with_default)]
 impl DbClient for Client {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueriedRows> {
+    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse> {
         let call_opt = self.make_call_option(ctx)?;
         let mut resp = self
             .raw_client
@@ -79,8 +80,10 @@ impl DbClient for Client {
             }));
         }
 
-        if resp.rows.is_empty() {
-            return Ok(QueriedRows::default());
+        if resp.schema_content.is_empty() {
+            let mut r = QueryResponse::default();
+            r.affected_rows = resp.affected_rows;
+            return Ok(r);
         }
 
         convert::parse_queried_rows(&resp.schema_content, &resp.rows).map_err(Error::Client)

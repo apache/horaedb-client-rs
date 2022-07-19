@@ -132,16 +132,22 @@ impl TryFrom<&avro_rs::Schema> for Schema {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct QueriedRows {
+pub struct QueryResponse {
     pub schema: Schema,
     pub rows: Vec<Row>,
+    pub affected_rows: u32,
 }
 
-impl QueriedRows {
+impl QueryResponse {
     pub fn with_capacity(schema: Schema, n: usize) -> Self {
         Self {
             schema,
+            affected_rows: 0,
             rows: Vec::with_capacity(n),
         }
+    }
+
+    pub fn has_schema(&self) -> bool {
+        !self.schema.column_schemas.is_empty()
     }
 }

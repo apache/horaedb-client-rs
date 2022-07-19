@@ -11,7 +11,7 @@ avro-rs = "0.13.0"
 
 [dependencies.ceresdbproto]
 git = "https://github.com/CeresDB/ceresdbproto.git"
-rev = "cbfd0135a5311d7a1d66d2d274a633c2572be29d"
+rev = "2c10152d021cd5a26b9c870cdede6a0317adca3d"
 
 [dependencies.common_types]
 git = "https://github.com/CeresDB/ceresdb.git"
