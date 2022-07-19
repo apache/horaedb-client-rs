@@ -135,14 +135,14 @@ impl TryFrom<&avro_rs::Schema> for Schema {
 pub struct QueryResponse {
     pub schema: Schema,
     pub rows: Vec<Row>,
-    pub affected_row: u32,
+    pub affected_rows: u32,
 }
 
 impl QueryResponse {
     pub fn with_capacity(schema: Schema, n: usize) -> Self {
         Self {
             schema,
-            affected_row: 0,
+            affected_rows: 0,
             rows: Vec::with_capacity(n),
         }
     }

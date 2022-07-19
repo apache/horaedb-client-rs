@@ -4,17 +4,17 @@ use crate::model::QueryResponse;
 
 /// Display [QueryResponse] in csv format.
 pub struct CsvFormatter {
-    pub rows: QueryResponse,
+    pub resp: QueryResponse,
 }
 
 impl Display for CsvFormatter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for column in &self.rows.schema.column_schemas {
+        for column in &self.resp.schema.column_schemas {
             f.write_fmt(format_args!("{},", column.name))?;
         }
         f.write_str("\n")?;
 
-        for row in &self.rows.rows {
+        for row in &self.resp.rows {
             for datum in &row.datums {
                 f.write_fmt(format_args!("{:?},", datum))?;
             }

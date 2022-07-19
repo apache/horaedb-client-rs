@@ -70,12 +70,8 @@ impl DbClient for Client {
         // TODO: maybe add a flag in protos to indicate if schema exists
         if resp.schema_content.is_empty() {
             let mut r = QueryResponse::default();
-            r.affected_row = resp.affected_rows;
+            r.affected_rows = resp.affected_rows;
             return Ok(r);
-        }
-
-        if resp.rows.is_empty() {
-            return Ok(QueryResponse::default());
         }
 
         convert::parse_queried_rows(&resp.schema_content, &resp.rows)
