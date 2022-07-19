@@ -8,5 +8,6 @@ pub mod options;
 pub use crate::{
     client::{Builder, DbClient},
     errors::{Error, Result},
+    model::write::is_reserved_column_name,
     options::{GrpcConfig, RpcOptions},
 };

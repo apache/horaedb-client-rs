@@ -19,7 +19,7 @@ impl Default for GrpcConfig {
         Self {
             thread_num: None,
             // 20MB
-            max_send_msg_len: 20 * 1 << 20,
+            max_send_msg_len: 20 * (1 << 20),
             // 1GB
             max_recv_msg_len: 1 << 30,
             // 1day

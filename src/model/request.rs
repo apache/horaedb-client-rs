@@ -2,6 +2,7 @@
 
 use ceresdbproto::storage::QueryRequest as QueryRequestPb;
 
+/// Query request
 /// Avoid exposed interfaces explicitly depending on ceresproto
 #[derive(Debug, Clone)]
 pub struct QueryRequest {
