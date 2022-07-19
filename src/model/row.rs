@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use common_types::datum::Datum;
+use crate::model::Datum;
 
 #[derive(Clone, Debug)]
 pub struct Row {
