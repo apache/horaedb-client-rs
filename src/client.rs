@@ -8,11 +8,7 @@ use grpcio::{CallOption, ChannelBuilder, EnvBuilder, MetadataBuilder};
 
 use crate::{
     errors::{self, Error, Result, ServerError},
-    model::{
-        convert,
-        request::QueryRequest,
-        row::{QueriedRows, QueryResponse},
-    },
+    model::{convert, request::QueryRequest, row::QueryResponse},
     options::{GrpcConfig, RpcOptions},
 };
 
@@ -73,16 +69,17 @@ impl DbClient for Client {
 
         // TODO: maybe add a flag in protos to indicate if schema exists
         if resp.schema_content.is_empty() {
-            return Ok(QueryResponse::AffectedRows(resp.affected_rows));
+            let mut r = QueryResponse::default();
+            r.affected_row = resp.affected_rows;
+            return Ok(r);
         }
 
         if resp.rows.is_empty() {
-            return Ok(QueryResponse::Rows(QueriedRows::default()));
+            return Ok(QueryResponse::default());
         }
 
         convert::parse_queried_rows(&resp.schema_content, &resp.rows)
             .map_err(|err_msg| Error::Client(err_msg))
-            .map(QueryResponse::Rows)
     }
 }
 

@@ -6,4 +6,4 @@ pub mod request;
 pub mod row;
 
 pub use convert::parse_queried_rows;
-pub use row::{ColumnDataType, ColumnSchema, QueriedRows, QueryResponse, Row, Schema};
+pub use row::{ColumnDataType, ColumnSchema, QueryResponse, Row, Schema};

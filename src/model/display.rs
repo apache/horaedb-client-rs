@@ -1,10 +1,10 @@
 use std::fmt::Display;
 
-use crate::model::QueriedRows;
+use crate::model::QueryResponse;
 
-/// Display [QueriedRows] in csv format.
+/// Display [QueryResponse] in csv format.
 pub struct CsvFormatter {
-    pub rows: QueriedRows,
+    pub rows: QueryResponse,
 }
 
 impl Display for CsvFormatter {

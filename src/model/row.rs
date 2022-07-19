@@ -132,22 +132,18 @@ impl TryFrom<&avro_rs::Schema> for Schema {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct QueriedRows {
+pub struct QueryResponse {
     pub schema: Schema,
     pub rows: Vec<Row>,
+    pub affected_row: u32,
 }
 
-impl QueriedRows {
+impl QueryResponse {
     pub fn with_capacity(schema: Schema, n: usize) -> Self {
         Self {
             schema,
+            affected_row: 0,
             rows: Vec::with_capacity(n),
         }
     }
-}
-
-#[derive(Clone, Debug)]
-pub enum QueryResponse {
-    Rows(QueriedRows),
-    AffectedRows(u32),
 }
