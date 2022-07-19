@@ -2,7 +2,10 @@
 
 //! Write request and some useful tools for it.
 
-use std::collections::{BTreeMap, HashMap};
+use std::{
+    collections::{BTreeMap, HashMap},
+    mem,
+};
 
 use ceresdbproto::storage::{
     Field, FieldGroup as FieldGroupPb, Tag as TagPb, WriteEntry as WriteEntryPb,
@@ -11,9 +14,14 @@ use ceresdbproto::storage::{
 
 use crate::model::value::{TimestampMs, Value};
 
+type SeriesKey = Vec<u8>;
+
+const TSID: &str = "tsid";
+const TIMESTAMP: &str = "timestamp";
+
 #[inline]
 fn is_reserved_column_name(name: &str) -> bool {
-    name.eq_ignore_ascii_case("tsid") || name.eq_ignore_ascii_case("timestamp")
+    name.eq_ignore_ascii_case(TSID) || name.eq_ignore_ascii_case(TIMESTAMP)
 }
 
 /// Builder for [`WriteRequest`].
@@ -23,9 +31,9 @@ fn is_reserved_column_name(name: &str) -> bool {
 ///
 /// [`row_builder`]: WriteRequestBuilder::row_builder
 /// [`build`]: WriteRequestBuilder::build
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct WriteRequestBuilder {
-    data_in_metrics: HashMap<Vec<u8>, WriteEntry>,
+    write_entries: HashMap<SeriesKey, WriteEntry>,
 }
 
 impl WriteRequestBuilder {
@@ -43,7 +51,7 @@ impl WriteRequestBuilder {
     pub fn build(self) -> WriteRequest {
         WriteRequest {
             write_entries: self
-                .data_in_metrics
+                .write_entries
                 .into_iter()
                 .map(|(_, entry)| entry)
                 .collect(),
@@ -103,22 +111,24 @@ impl<'a> RowBuilder<'a> {
     /// [`WriteRequestBuilder`].
     pub fn finish(self) -> Result<(), String> {
         if self.contains_reserved_column_name {
-            return Err("Tag or field name contains keyword in ceresdb".to_owned());
+            return Err("Tag or field name reserved column name in ceresdb".to_string());
         }
 
         if self.fields.is_empty() {
-            return Err("Fields should not be empty".to_owned());
+            return Err("Fields should not be empty".to_string());
         }
 
         // make series key
-        let metric = self.metric.ok_or(Err("Metric must be set".to_owned()))?;
+        let metric = self
+            .metric
+            .ok_or_else(|| "Metric must be set".to_string())?;
         let series_key = make_series_key(metric.as_str(), &self.tags);
 
         // insert to write req builder
         let tags = self.tags;
-        let data = self
+        let write_entry = self
             .write_req_builder
-            .data_in_metrics
+            .write_entries
             .entry(series_key)
             .or_insert_with(|| {
                 let series = Series { metric, tags };
@@ -129,20 +139,20 @@ impl<'a> RowBuilder<'a> {
                 }
             });
 
-        let point = data
+        let fields = write_entry
             .ts_fields
             .entry(
                 self.timestamp
-                    .ok_or(Err("Timestamp must be set".to_owned()))?,
+                    .ok_or_else(|| "Timestamp must be set".to_string())?,
             )
             .or_insert_with(Fields::default);
-        point.extend(self.fields.into_iter());
+        fields.extend(self.fields.into_iter());
 
         Ok(())
     }
 }
 
-fn make_series_key(metric: &str, tags: &BTreeMap<String, Value>) -> Vec<u8> {
+fn make_series_key(metric: &str, tags: &BTreeMap<String, Value>) -> SeriesKey {
     let mut series_key = metric.as_bytes().to_vec();
     for (name, val) in tags {
         series_key.extend_from_slice(name.as_bytes());
@@ -209,23 +219,26 @@ impl NameDict {
 }
 
 impl From<WriteRequest> for WriteRequestPb {
-    fn from(req: WriteRequest) -> Self {
+    fn from(mut req: WriteRequest) -> Self {
         let mut req_pb = WriteRequestPb::default();
         // partition the write entries first
         let mut partitions_by_metric: HashMap<_, Vec<_>> = HashMap::new();
         for (idx, entry) in req.write_entries.iter().enumerate() {
-            let parition = partitions_by_metric
-                .entry(entry.series.metric.clone())
-                .or_insert(Vec::new());
-            parition.push(idx);
+            let partition = match partitions_by_metric.get_mut(&entry.series.metric) {
+                Some(p) => p,
+                None => partitions_by_metric
+                    .entry(entry.series.metric.clone())
+                    .or_insert_with(Vec::new),
+            };
+            partition.push(idx);
         }
 
         let mut write_metrics = Vec::with_capacity(partitions_by_metric.len());
-        for partition in partitions_by_metric {
+        for (metric, entry_idxs) in partitions_by_metric {
             write_metrics.push(convert_one_write_metric(
-                partition.0,
-                &partition.1,
-                &req.write_entries,
+                metric,
+                &entry_idxs,
+                &mut req.write_entries,
             ));
         }
         req_pb.set_metrics(write_metrics.into());
@@ -236,26 +249,27 @@ impl From<WriteRequest> for WriteRequestPb {
 
 fn convert_one_write_metric(
     metric: String,
-    idxs: &[usize],
-    entries: &[WriteEntry],
+    entry_idxs: &[usize],
+    entries: &mut [WriteEntry],
 ) -> WriteMetricPb {
     let mut write_metric_pb = WriteMetricPb::default();
 
-    let mut tags_dic = NameDict::new();
-    let mut fields_dic = NameDict::new();
-    let mut wirte_entries = Vec::with_capacity(idxs.len());
-    for idx in idxs {
+    let mut tags_dict = NameDict::new();
+    let mut fields_dict = NameDict::new();
+    let mut wirte_entries = Vec::with_capacity(entry_idxs.len());
+    for idx in entry_idxs {
         assert!(*idx < entries.len());
+        // directly take entry from entries to avoid cloning
         wirte_entries.push(convert_entry(
-            &mut tags_dic,
-            &mut fields_dic,
-            &entries[*idx],
+            &mut tags_dict,
+            &mut fields_dict,
+            mem::take(&mut entries[*idx]),
         ));
     }
 
     write_metric_pb.set_metric(metric);
-    write_metric_pb.set_tag_names(tags_dic.convert_ordered().into());
-    write_metric_pb.set_field_names(fields_dic.convert_ordered().into());
+    write_metric_pb.set_tag_names(tags_dict.convert_ordered().into());
+    write_metric_pb.set_field_names(fields_dict.convert_ordered().into());
     write_metric_pb.set_entries(wirte_entries.into());
 
     write_metric_pb
@@ -264,17 +278,17 @@ fn convert_one_write_metric(
 fn convert_entry(
     tags_dic: &mut NameDict,
     fields_dic: &mut NameDict,
-    entry: &WriteEntry,
+    entry: WriteEntry,
 ) -> WriteEntryPb {
     let mut entry_pb = WriteEntryPb::default();
-    entry_pb.set_tags(convert_tags(tags_dic, &entry.series.tags).into());
-    entry_pb.set_field_groups(convert_ts_fields(fields_dic, &entry.ts_fields).into());
+    entry_pb.set_tags(convert_tags(tags_dic, entry.series.tags).into());
+    entry_pb.set_field_groups(convert_ts_fields(fields_dic, entry.ts_fields).into());
 
     entry_pb
 }
 
 // TODO(kamille) reduce cloning from tags.
-fn convert_tags(tags_dic: &mut NameDict, tags: &BTreeMap<String, Value>) -> Vec<TagPb> {
+fn convert_tags(tags_dic: &mut NameDict, tags: BTreeMap<String, Value>) -> Vec<TagPb> {
     if tags.is_empty() {
         return Vec::new();
     }
@@ -282,8 +296,8 @@ fn convert_tags(tags_dic: &mut NameDict, tags: &BTreeMap<String, Value>) -> Vec<
     let mut tag_pbs = Vec::with_capacity(tags.len());
     for (name, val) in tags {
         let mut tag_pb = TagPb::default();
-        tag_pb.set_name_index(tags_dic.insert(name.clone()));
-        tag_pb.set_value(val.clone().into());
+        tag_pb.set_name_index(tags_dic.insert(name));
+        tag_pb.set_value(val.into());
         tag_pbs.push(tag_pb);
     }
 
@@ -292,7 +306,7 @@ fn convert_tags(tags_dic: &mut NameDict, tags: &BTreeMap<String, Value>) -> Vec<
 
 fn convert_ts_fields(
     fields_dic: &mut NameDict,
-    ts_fields: &BTreeMap<TimestampMs, Fields>,
+    ts_fields: BTreeMap<TimestampMs, Fields>,
 ) -> Vec<FieldGroupPb> {
     if ts_fields.is_empty() {
         return Vec::new();
@@ -300,21 +314,21 @@ fn convert_ts_fields(
 
     let mut field_group_pbs = Vec::with_capacity(ts_fields.len());
     for (ts, fields) in ts_fields {
-        // ts + fields will be converted to file group in pb
-        let mut file_group_pb = FieldGroupPb::default();
-        file_group_pb.set_timestamp(*ts);
+        // ts + fields will be converted to field group in pb
+        let mut field_group_pb = FieldGroupPb::default();
+        field_group_pb.set_timestamp(ts);
 
         let mut field_pbs = Vec::with_capacity(fields.len());
-        for (name, val) in fields.iter() {
+        for (name, val) in fields {
             let mut field_pb = Field::default();
-            field_pb.set_name_index(fields_dic.insert(name.clone()));
-            field_pb.set_value(val.clone().into());
+            field_pb.set_name_index(fields_dic.insert(name));
+            field_pb.set_value(val.into());
             field_pbs.push(field_pb);
         }
-        file_group_pb.set_fields(field_pbs.into());
+        field_group_pb.set_fields(field_pbs.into());
 
         // collect field group
-        field_group_pbs.push(file_group_pb);
+        field_group_pbs.push(field_group_pb);
     }
 
     field_group_pbs
@@ -511,7 +525,7 @@ mod test {
 
         let mut tag_dic = NameDict::new();
 
-        let tags_pb = convert_tags(&mut tag_dic, &test_tags);
+        let tags_pb = convert_tags(&mut tag_dic, test_tags.clone());
         let tag_names = tag_dic.convert_ordered();
 
         for tag_pb in tags_pb {
@@ -522,8 +536,7 @@ mod test {
     }
 
     #[test]
-    fn test_convert_points() {
-        // test points
+    fn test_convert_ts_fields() {
         let mut test_ts_fields = BTreeMap::new();
 
         let ts1 = Local::now().timestamp_millis();
@@ -566,11 +579,11 @@ mod test {
         test_ts_fields.insert(ts2, test_fields2);
         // convert and check
         let mut field_dic = NameDict::new();
-        let field_groups_pb = convert_ts_fields(&mut field_dic, &test_ts_fields);
+        let field_groups_pb = convert_ts_fields(&mut field_dic, test_ts_fields.clone());
         let field_names = field_dic.convert_ordered();
 
         for f_group in field_groups_pb {
-            let fields_map = &test_ts_fields.get(&f_group.get_timestamp()).unwrap();
+            let fields_map = test_ts_fields.get(&f_group.get_timestamp()).unwrap();
             for field_pb in f_group.fields {
                 let key_in_map = field_names[field_pb.get_name_index() as usize].as_str();
                 let val_in_map: ValuePb = fields_map.get(key_in_map).unwrap().clone().into();
