@@ -103,7 +103,7 @@ impl Schema {
 
     #[inline]
     pub fn col_idx(&self, name: &str) -> Option<usize> {
-        self.lookup.get(&*name).copied()
+        self.lookup.get(name).copied()
     }
 }
 

@@ -65,7 +65,7 @@ pub fn parse_queried_rows(raw_schema: &str, rows: &[Vec<u8>]) -> Result<QueryRes
     let mut queried_rows = QueryResponse::with_capacity(schema, rows.len());
     for raw_row in rows {
         let mut row = Row::with_column_num(queried_rows.schema.num_cols());
-        parse_one_row(&avro_schema, &*raw_row, &mut row)?;
+        parse_one_row(&avro_schema, raw_row, &mut row)?;
         queried_rows.rows.push(row);
     }
 

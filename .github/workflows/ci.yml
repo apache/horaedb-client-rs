@@ -1,0 +1,92 @@
+# Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'etc/**'
+      - '**.md'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'etc/**'
+      - '**.md'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  style-check:
+    name: Libraries Style Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        rust: [1.62.0]
+    container:
+      image: rust:${{ matrix.rust }}-slim-bullseye
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Build Environment
+        run: |
+          apt update
+          apt install --yes cmake 
+          rm -rf /var/lib/apt/lists/*
+      - name: Setup Toolchain
+        run: |
+          rustup component add rustfmt
+      - name: Run
+        run: |
+          make fmt
+        env:
+          CARGO_HOME: "/github/home/.cargo"
+          CARGO_TARGET_DIR: "/github/home/target/debug"
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        rust: [1.62.0]
+    container:
+      image: rust:${{ matrix.rust }}-slim-bullseye
+      env:
+        RUSTFLAGS: "-C debuginfo=1"
+    steps:
+      - uses: actions/checkout@v3
+        # with:
+        #   submodules: true
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: /github/home/.cargo
+          key: cargo-cache-
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: /github/home/target
+          key: ${{ runner.os }}-target-cache-${{ matrix.rust }}-
+      - name: Cache Build Dependencies
+        uses: actions/cache@v3
+        with:
+          path: /github/home
+          key: ${{ runner.os }}-toolchain-cache-
+      - name: Setup Build Environment
+        run: |
+          apt update
+          apt install --yes gcc g++ libssl-dev pkg-config cmake 
+          rm -rf /var/lib/apt/lists/*
+      - name: Install Clippy
+        run: |
+          rustup component add clippy
+      - name: Run Clippy
+        run: |
+          make clippy
+        env:
+          CARGO_HOME: "/github/home/.cargo"
+          CARGO_TARGET_DIR: "/github/home/target/debug"
