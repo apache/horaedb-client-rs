@@ -1,7 +1,12 @@
 SHELL = /bin/bash
 
+DIR=$(shell pwd)
+
 fmt:
-	cargo fmt -- --check
+	cd $(DIR); cargo fmt -- --check
 
 clippy:
-	cargo clippy --all-targets --all-features -- -D warnings
+	cd $(DIR); cargo clippy --all-targets --all-features -- -D warnings
+
+test:
+	cd $(DIR); cargo test --workspace -- --test-threads=4
