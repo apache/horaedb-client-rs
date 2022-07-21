@@ -1,7 +1,5 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-use std::process::Command;
-
 use ceresdb_client_rs::{
     client::{Client, RpcContext},
     model::{request::QueryRequest, value::Value, write::WriteRequestBuilder},
@@ -9,46 +7,32 @@ use ceresdb_client_rs::{
 };
 use chrono::Local;
 
-fn create_table() {
-    let output = Command::new("curl")
-        .arg("--location")
-        .arg("--request")
-        .arg("POST")
-        .arg("http://127.0.0.1:5440/sql")
-        .arg("--header")
-        .arg("Content-Type: application/json")
-        .arg("--data-raw")
-        .arg(
-            r#"{"query": "CREATE TABLE ceresdb ("#.to_owned()
-                + "str_tag string TAG, "
-                + "int_tag int32 TAG, "
-                + "var_tag varbinary TAG, "
-                + "str_field string, "
-                + "int_field int32, "
-                + "bin_field varbinary, "
-                + "t timestamp NOT NULL, "
-                + r#"TIMESTAMP KEY(t)) ENGINE=Analytic with (enable_ttl='false')"}"#,
-        )
-        .output()
-        .unwrap();
-    assert!(output.status.success());
-    println!("{}", String::from_utf8_lossy(&output.stdout));
+async fn create_table(client: &Client, rpc_ctx: &RpcContext) {
+    let create_table_sql = r#"CREATE TABLE ceresdb (
+                str_tag string TAG,
+                int_tag int32 TAG,
+                var_tag varbinary TAG,
+                str_field string,
+                int_field int32,
+                bin_field varbinary,
+                t timestamp NOT NULL,
+                TIMESTAMP KEY(t)) ENGINE=Analytic with (enable_ttl='false')"#;
+    let req = QueryRequest {
+        metrics: vec!["ceresdb".to_string()],
+        ql: create_table_sql.to_string(),
+    };
+    let _resp = client.query(rpc_ctx, &req).await.unwrap();
+    println!("Create table success!");
 }
 
-fn drop_table() {
-    let output = Command::new("curl")
-        .arg("--location")
-        .arg("--request")
-        .arg("POST")
-        .arg("http://127.0.0.1:5440/sql")
-        .arg("--header")
-        .arg("Content-Type: application/json")
-        .arg("--data-raw")
-        .arg(r#"{"query": "DROP TABLE ceresdb"}"#)
-        .output()
-        .unwrap();
-    assert!(output.status.success());
-    println!("{}", String::from_utf8_lossy(&output.stdout));
+async fn drop_table(client: &Client, rpc_ctx: &RpcContext) {
+    let drop_table_sql = "DROP TABLE ceresdb";
+    let req = QueryRequest {
+        metrics: vec!["ceresdb".to_string()],
+        ql: drop_table_sql.to_string(),
+    };
+    let _resp = client.query(rpc_ctx, &req).await.unwrap();
+    println!("Drop table success!");
 }
 
 async fn write(client: &Client, rpc_ctx: &RpcContext) {
@@ -106,7 +90,7 @@ async fn write(client: &Client, rpc_ctx: &RpcContext) {
 
 async fn query(client: &Client, rpc_ctx: &RpcContext) {
     let req = QueryRequest {
-        metrics: vec!["test".to_string()],
+        metrics: vec!["ceresdb".to_string()],
         ql: "select * from ceresdb;".to_string(),
     };
     let resp = client.query(rpc_ctx, &req).await.unwrap();
@@ -131,7 +115,7 @@ async fn main() {
 
     println!("------------------------------------------------------------------");
     println!("### create table:");
-    create_table();
+    create_table(&client, &rpc_ctx).await;
     println!("------------------------------------------------------------------");
 
     println!("### write:");
@@ -143,6 +127,6 @@ async fn main() {
     println!("------------------------------------------------------------------");
 
     println!("### drop table:");
-    drop_table();
+    drop_table(&client, &rpc_ctx).await;
     println!("------------------------------------------------------------------");
 }
