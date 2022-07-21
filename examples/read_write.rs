@@ -1,0 +1,148 @@
+// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
+
+use std::process::Command;
+
+use ceresdb_client_rs::{
+    client::{Client, RpcContext},
+    model::{request::QueryRequest, value::Value, write::WriteRequestBuilder},
+    Builder, DbClient,
+};
+use chrono::Local;
+
+fn create_table() {
+    let output = Command::new("curl")
+        .arg("--location")
+        .arg("--request")
+        .arg("POST")
+        .arg("http://127.0.0.1:5440/sql")
+        .arg("--header")
+        .arg("Content-Type: application/json")
+        .arg("--data-raw")
+        .arg(
+            r#"{"query": "CREATE TABLE ceresdb ("#.to_owned()
+                + "str_tag string TAG, "
+                + "int_tag int32 TAG, "
+                + "var_tag varbinary TAG, "
+                + "str_field string, "
+                + "int_field int32, "
+                + "bin_field varbinary, "
+                + "t timestamp NOT NULL, "
+                + r#"TIMESTAMP KEY(t)) ENGINE=Analytic with (enable_ttl='false')"}"#,
+        )
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    println!("{}", String::from_utf8_lossy(&output.stdout));
+}
+
+fn drop_table() {
+    let output = Command::new("curl")
+        .arg("--location")
+        .arg("--request")
+        .arg("POST")
+        .arg("http://127.0.0.1:5440/sql")
+        .arg("--header")
+        .arg("Content-Type: application/json")
+        .arg("--data-raw")
+        .arg(r#"{"query": "DROP TABLE ceresdb"}"#)
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    println!("{}", String::from_utf8_lossy(&output.stdout));
+}
+
+async fn write(client: &Client, rpc_ctx: &RpcContext) {
+    let ts1 = Local::now().timestamp_millis();
+    let mut write_req_builder = WriteRequestBuilder::default();
+    // first row
+    write_req_builder
+        .row_builder()
+        .metric("ceresdb".to_string())
+        .timestamp(ts1)
+        .tag("str_tag".to_string(), Value::String("tag_val1".to_string()))
+        .tag("int_tag".to_string(), Value::Int32(42))
+        .tag(
+            "var_tag".to_string(),
+            Value::Varbinary(b"tag_bin_val1".to_vec()),
+        )
+        .field(
+            "str_field".to_string(),
+            Value::String("field_val1".to_string()),
+        )
+        .field("int_field".to_string(), Value::Int32(42))
+        .field(
+            "bin_field".to_string(),
+            Value::Varbinary(b"field_bin_val1".to_vec()),
+        )
+        .finish()
+        .unwrap();
+
+    // second row
+    write_req_builder
+        .row_builder()
+        .metric("ceresdb".to_string())
+        .timestamp(ts1 + 40)
+        .tag("str_tag".to_string(), Value::String("tag_val2".to_string()))
+        .tag("int_tag".to_string(), Value::Int32(43))
+        .tag(
+            "var_tag".to_string(),
+            Value::Varbinary(b"tag_bin_val2".to_vec()),
+        )
+        .field(
+            "str_field".to_string(),
+            Value::String("field_val2".to_string()),
+        )
+        .field(
+            "bin_field".to_string(),
+            Value::Varbinary(b"field_bin_val2".to_vec()),
+        )
+        .finish()
+        .unwrap();
+
+    let write_req = write_req_builder.build();
+    let res = client.write(rpc_ctx, &write_req).await;
+    println!("{:?}", res);
+}
+
+async fn query(client: &Client, rpc_ctx: &RpcContext) {
+    let req = QueryRequest {
+        metrics: vec!["test".to_string()],
+        ql: "select * from ceresdb;".to_string(),
+    };
+    let resp = client.query(rpc_ctx, &req).await.unwrap();
+    println!("Rows in the resp:{:?}", resp);
+
+    for (row_id, row) in resp.rows.iter().enumerate() {
+        let format_row: Vec<_> = row
+            .datums
+            .iter()
+            .zip(resp.schema.column_schemas.iter())
+            .map(|(datum, col_schema)| format!("{:?}:{:?}", col_schema.name, datum))
+            .collect();
+        println!("row{}:{:?}", row_id, format_row);
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    // you should ensure ceresdb is running, and grpc port is set to 8831
+    let client = Builder::new("127.0.0.1:8831".to_string()).build();
+    let rpc_ctx = RpcContext::new("public".to_string(), "".to_string());
+
+    println!("------------------------------------------------------------------");
+    println!("### create table:");
+    create_table();
+    println!("------------------------------------------------------------------");
+
+    println!("### write:");
+    write(&client, &rpc_ctx).await;
+    println!("------------------------------------------------------------------");
+
+    println!("### read:");
+    query(&client, &rpc_ctx).await;
+    println!("------------------------------------------------------------------");
+
+    println!("### drop table:");
+    drop_table();
+    println!("------------------------------------------------------------------");
+}
