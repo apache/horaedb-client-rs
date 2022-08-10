@@ -1,13 +1,13 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
 use ceresdb_client_rs::{
-    client::{Client, RpcContext},
+    rpc_client::{RpcClient, RpcContext},
     model::{request::QueryRequest, value::Value, write::WriteRequestBuilder},
-    Builder, DbClient,
+    StandaloneImplBuilder, StandaloneImpl, DbClient,
 };
 use chrono::Local;
 
-async fn create_table(client: &Client, rpc_ctx: &RpcContext) {
+async fn create_table(client: &impl DbClient, rpc_ctx: &RpcContext) {
     let create_table_sql = r#"CREATE TABLE ceresdb (
                 str_tag string TAG,
                 int_tag int32 TAG,
@@ -25,7 +25,7 @@ async fn create_table(client: &Client, rpc_ctx: &RpcContext) {
     println!("Create table success!");
 }
 
-async fn drop_table(client: &Client, rpc_ctx: &RpcContext) {
+async fn drop_table(client: &impl DbClient, rpc_ctx: &RpcContext) {
     let drop_table_sql = "DROP TABLE ceresdb";
     let req = QueryRequest {
         metrics: vec!["ceresdb".to_string()],
@@ -35,7 +35,7 @@ async fn drop_table(client: &Client, rpc_ctx: &RpcContext) {
     println!("Drop table success!");
 }
 
-async fn write(client: &Client, rpc_ctx: &RpcContext) {
+async fn write(client: &impl DbClient, rpc_ctx: &RpcContext) {
     let ts1 = Local::now().timestamp_millis();
     let mut write_req_builder = WriteRequestBuilder::default();
     // first row
@@ -88,7 +88,7 @@ async fn write(client: &Client, rpc_ctx: &RpcContext) {
     println!("{:?}", res);
 }
 
-async fn query(client: &Client, rpc_ctx: &RpcContext) {
+async fn query(client: &impl DbClient, rpc_ctx: &RpcContext) {
     let req = QueryRequest {
         metrics: vec!["ceresdb".to_string()],
         ql: "select * from ceresdb;".to_string(),
@@ -110,7 +110,7 @@ async fn query(client: &Client, rpc_ctx: &RpcContext) {
 #[tokio::main]
 async fn main() {
     // you should ensure ceresdb is running, and grpc port is set to 8831
-    let client = Builder::new("127.0.0.1:8831".to_string()).build();
+    let client = StandaloneImplBuilder::new("127.0.0.1:8831".to_string()).build();
     let rpc_ctx = RpcContext::new("public".to_string(), "".to_string());
 
     println!("------------------------------------------------------------------");

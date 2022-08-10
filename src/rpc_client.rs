@@ -41,12 +41,12 @@ pub trait DbClient {
 
 /// The implementation for DbClient is based on grpc protocol.
 #[derive(Clone)]
-pub struct Client {
+pub struct RpcClient {
     raw_client: Arc<StorageServiceClient>,
     rpc_opts: RpcOptions,
 }
 
-impl Client {
+impl RpcClient {
     /// Make the `CallOption` for grpc request.
     fn make_call_option(&self, ctx: &RpcContext) -> Result<CallOption> {
         let mut builder = MetadataBuilder::with_capacity(1);
@@ -59,13 +59,8 @@ impl Client {
             .timeout(self.rpc_opts.read_timeout)
             .headers(headers))
     }
-}
 
-// TODO(kamille) may be better to rename `DbClient` and `Client`
-#[async_trait]
-#[allow(clippy::field_reassign_with_default)]
-impl DbClient for Client {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse> {
+    pub async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse> {
         let call_opt = self.make_call_option(ctx)?;
         let mut resp = self
             .raw_client
@@ -89,7 +84,7 @@ impl DbClient for Client {
         convert::parse_queried_rows(&resp.schema_content, &resp.rows).map_err(Error::Client)
     }
 
-    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResult> {
+    pub async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResult> {
         let call_opt = self.make_call_option(ctx)?;
         let req_pb: WriteRequestPb = req.clone().into();
 
@@ -113,14 +108,14 @@ impl DbClient for Client {
 
 /// Builder for building an [`Client`].
 #[derive(Debug, Clone)]
-pub struct Builder {
+pub struct RpcClientBuilder {
     endpoint: String,
     rpc_opts: RpcOptions,
     grpc_config: GrpcConfig,
 }
 
 #[allow(clippy::return_self_not_must_use)]
-impl Builder {
+impl RpcClientBuilder {
     pub fn new(endpoint: String) -> Self {
         Self {
             endpoint,
@@ -141,7 +136,7 @@ impl Builder {
         self
     }
 
-    pub fn build(self) -> Client {
+    pub fn build(self) -> RpcClient {
         let env = {
             let mut env_builder = EnvBuilder::new();
             if let Some(thread_num) = self.grpc_config.thread_num {
@@ -158,7 +153,7 @@ impl Builder {
             .keepalive_timeout(self.grpc_config.keepalive_timeout)
             .connect(&self.endpoint);
         let raw_client = Arc::new(StorageServiceClient::new(channel));
-        Client {
+        RpcClient {
             raw_client,
             rpc_opts: self.rpc_opts,
         }
