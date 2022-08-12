@@ -1,9 +1,8 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
 use ceresdb_client_rs::{
-    rpc_client::{RpcClient, RpcContext},
     model::{request::QueryRequest, value::Value, write::WriteRequestBuilder},
-    StandaloneImplBuilder, StandaloneImpl, DbClient,
+    DbClient, StandaloneImplBuilder, rpc_client::RpcContext,
 };
 use chrono::Local;
 

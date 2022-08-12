@@ -11,6 +11,8 @@ pub enum Error {
     /// Error from the client and basically the rpc request has not been called
     /// yet or the rpc request has already been finished successfully.
     Client(String),
+    /// Error unknown
+    Unknown(String),
 }
 
 #[derive(Debug, Clone)]

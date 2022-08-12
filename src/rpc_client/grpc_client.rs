@@ -11,42 +11,24 @@ use crate::{
     model::{
         convert,
         request::QueryRequest,
+        route::{RouteRequest, RouteResponse},
         row::QueryResponse,
         write::{WriteRequest, WriteResult},
     },
     options::{GrpcConfig, RpcOptions},
+    rpc_client::{RpcClient, RpcContext},
 };
 
 const RPC_HEADER_TENANT_KEY: &str = "x-ceresdb-access-tenant";
 
-/// Context for rpc request.
-#[derive(Clone, Debug)]
-pub struct RpcContext {
-    pub tenant: String,
-    pub token: String,
-}
-
-impl RpcContext {
-    pub fn new(tenant: String, token: String) -> Self {
-        Self { tenant, token }
-    }
-}
-
-/// The abstraction for client of ceresdb server.
-#[async_trait]
-pub trait DbClient {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse>;
-    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResult>;
-}
-
 /// The implementation for DbClient is based on grpc protocol.
 #[derive(Clone)]
-pub struct RpcClient {
+pub struct GrpcClient {
     raw_client: Arc<StorageServiceClient>,
     rpc_opts: RpcOptions,
 }
 
-impl RpcClient {
+impl GrpcClient {
     /// Make the `CallOption` for grpc request.
     fn make_call_option(&self, ctx: &RpcContext) -> Result<CallOption> {
         let mut builder = MetadataBuilder::with_capacity(1);
@@ -106,16 +88,31 @@ impl RpcClient {
     }
 }
 
+#[async_trait]
+impl RpcClient for GrpcClient {
+    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse> {
+        self.query(ctx, req).await
+    }
+
+    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResult> {
+        self.write(ctx, req).await
+    }
+
+    async fn route(&self, ctx: &RpcContext, req: &RouteRequest) -> Result<RouteResponse> {
+        todo!()
+    }
+}
+
 /// Builder for building an [`Client`].
 #[derive(Debug, Clone)]
-pub struct RpcClientBuilder {
+pub struct GrpcClientBuilder {
     endpoint: String,
     rpc_opts: RpcOptions,
     grpc_config: GrpcConfig,
 }
 
 #[allow(clippy::return_self_not_must_use)]
-impl RpcClientBuilder {
+impl GrpcClientBuilder {
     pub fn new(endpoint: String) -> Self {
         Self {
             endpoint,
@@ -136,7 +133,7 @@ impl RpcClientBuilder {
         self
     }
 
-    pub fn build(self) -> RpcClient {
+    pub fn build(self) -> GrpcClient {
         let env = {
             let mut env_builder = EnvBuilder::new();
             if let Some(thread_num) = self.grpc_config.thread_num {
@@ -153,7 +150,7 @@ impl RpcClientBuilder {
             .keepalive_timeout(self.grpc_config.keepalive_timeout)
             .connect(&self.endpoint);
         let raw_client = Arc::new(StorageServiceClient::new(channel));
-        RpcClient {
+        GrpcClient {
             raw_client,
             rpc_opts: self.rpc_opts,
         }

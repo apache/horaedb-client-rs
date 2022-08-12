@@ -5,9 +5,10 @@ authors = ["CeresDB Authors <ceresdbservice@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-async-trait = "0.1.41"
+async-trait = "0.1.57"
 grpcio = "0.9.1"
 avro-rs = "0.13.0"
+dashmap = "5.3.4"
 
 [dependencies.ceresdbproto]
 git = "https://github.com/CeresDB/ceresdbproto.git"

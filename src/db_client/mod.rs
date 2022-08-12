@@ -1,12 +1,17 @@
 pub mod cluster;
 pub mod standalone;
 
-use crate::errors::Result;
 use async_trait::async_trait;
-use crate::model::QueryResponse;
-use crate::model::request::QueryRequest;
-use crate::model::write::{WriteRequest, WriteResult};
-use crate::rpc_client::RpcContext;
+
+use crate::{
+    errors::Result,
+    model::{
+        request::QueryRequest,
+        write::{WriteRequest, WriteResult},
+        QueryResponse,
+    },
+    rpc_client::RpcContext,
+};
 
 /// Route metric to endpoint
 #[async_trait]

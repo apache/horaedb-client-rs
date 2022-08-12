@@ -1,15 +1,20 @@
-use crate::rpc_client::{RpcClient, RpcContext, RpcClientBuilder};
-use crate::{GrpcConfig, RpcOptions};
-use crate::db_client::DbClient;
-use crate::model::QueryResponse;
-use crate::model::request::QueryRequest;
-use crate::model::write::{WriteRequest, WriteResult};
 use async_trait::async_trait;
-use crate::errors::Result;
+
+use crate::{
+    db_client::DbClient,
+    errors::Result,
+    model::{
+        request::QueryRequest,
+        write::{WriteRequest, WriteResult},
+        QueryResponse,
+    },
+    rpc_client::{GrpcClient, GrpcClientBuilder, RpcContext},
+    GrpcConfig, RpcOptions,
+};
 
 /// Now, `StandaloneImpl` just wrap `RpcClient` simply.
 pub struct StandaloneImpl {
-    rpc_client: RpcClient,
+    rpc_client: GrpcClient,
 }
 
 #[async_trait]
@@ -25,13 +30,13 @@ impl DbClient for StandaloneImpl {
 
 /// Builder for StandaloneImpl
 pub struct StandaloneImplBuilder {
-    rpc_builder: RpcClientBuilder,
+    rpc_builder: GrpcClientBuilder,
 }
 
 impl StandaloneImplBuilder {
     pub fn new(endpoint: String) -> Self {
         Self {
-            rpc_builder: RpcClientBuilder::new(endpoint),
+            rpc_builder: GrpcClientBuilder::new(endpoint),
         }
     }
 
