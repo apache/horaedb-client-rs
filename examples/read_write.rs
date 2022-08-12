@@ -109,7 +109,7 @@ async fn query(client: &impl DbClient, rpc_ctx: &RpcContext) {
 #[tokio::main]
 async fn main() {
     // you should ensure ceresdb is running, and grpc port is set to 8831
-    let client = StandaloneImplBuilder::new("127.0.0.1:8831".to_string()).build();
+    let client = StandaloneImplBuilder::new("127.0.0.1:8831".to_string(), 1).build();
     let rpc_ctx = RpcContext::new("public".to_string(), "".to_string());
 
     println!("------------------------------------------------------------------");

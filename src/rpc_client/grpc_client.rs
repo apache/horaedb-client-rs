@@ -4,14 +4,14 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ceresdbproto::{storage::WriteRequest as WriteRequestPb, storage_grpc::StorageServiceClient};
-use grpcio::{CallOption, ChannelBuilder, EnvBuilder, MetadataBuilder};
+use grpcio::{CallOption, ChannelBuilder, EnvBuilder, MetadataBuilder, Environment};
 
 use crate::{
     errors::{self, Error, Result, ServerError},
     model::{
         convert,
         request::QueryRequest,
-        route::{RouteRequest, RouteResponse},
+        route::{RouteRequest, RouteResponse, EndPoint},
         row::QueryResponse,
         write::{WriteRequest, WriteResult},
     },
@@ -104,55 +104,52 @@ impl RpcClient for GrpcClient {
 }
 
 /// Builder for building an [`Client`].
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct GrpcClientBuilder {
-    endpoint: String,
     rpc_opts: RpcOptions,
     grpc_config: GrpcConfig,
+    env: Arc<Environment>,
 }
 
 #[allow(clippy::return_self_not_must_use)]
 impl GrpcClientBuilder {
-    pub fn new(endpoint: String) -> Self {
+    pub fn new(thread_num: usize) -> Self {
+        let env = {
+            let mut env_builder = EnvBuilder::new();
+            env_builder = env_builder.cq_count(thread_num);
+            Arc::new(env_builder.build())
+        };
+
         Self {
-            endpoint,
             rpc_opts: RpcOptions::default(),
             grpc_config: GrpcConfig::default(),
+            env,
         }
     }
 
     #[inline]
-    pub fn grpc_config(mut self, grpc_config: GrpcConfig) -> Self {
+    pub fn grpc_config(&mut self, grpc_config: GrpcConfig) -> &mut Self {
         self.grpc_config = grpc_config;
         self
     }
 
     #[inline]
-    pub fn rpc_opts(mut self, rpc_opts: RpcOptions) -> Self {
+    pub fn rpc_opts(&mut self, rpc_opts: RpcOptions) -> &mut Self {
         self.rpc_opts = rpc_opts;
         self
     }
 
-    pub fn build(self) -> GrpcClient {
-        let env = {
-            let mut env_builder = EnvBuilder::new();
-            if let Some(thread_num) = self.grpc_config.thread_num {
-                env_builder = env_builder.cq_count(thread_num);
-            }
-
-            Arc::new(env_builder.build())
-        };
-
-        let channel = ChannelBuilder::new(env)
+    pub fn build(&self, endpoint: String) -> GrpcClient {
+        let channel = ChannelBuilder::new(self.env.clone())
             .max_send_message_len(self.grpc_config.max_send_msg_len)
             .max_receive_message_len(self.grpc_config.max_recv_msg_len)
             .keepalive_time(self.grpc_config.keepalive_time)
             .keepalive_timeout(self.grpc_config.keepalive_timeout)
-            .connect(&self.endpoint);
+            .connect(&endpoint);
         let raw_client = Arc::new(StorageServiceClient::new(channel));
         GrpcClient {
             raw_client,
-            rpc_opts: self.rpc_opts,
+            rpc_opts: self.rpc_opts.clone(),
         }
     }
 }

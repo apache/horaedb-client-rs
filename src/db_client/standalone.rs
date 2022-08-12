@@ -30,31 +30,33 @@ impl DbClient for StandaloneImpl {
 
 /// Builder for StandaloneImpl
 pub struct StandaloneImplBuilder {
+    endpoint: String,
     rpc_builder: GrpcClientBuilder,
 }
 
 impl StandaloneImplBuilder {
-    pub fn new(endpoint: String) -> Self {
+    pub fn new(endpoint: String, thread_num: usize) -> Self {
         Self {
-            rpc_builder: GrpcClientBuilder::new(endpoint),
+            endpoint,
+            rpc_builder: GrpcClientBuilder::new(thread_num),
         }
     }
 
     #[inline]
     pub fn grpc_config(mut self, grpc_config: GrpcConfig) -> Self {
-        self.rpc_builder = self.rpc_builder.grpc_config(grpc_config);
+        self.rpc_builder.grpc_config(grpc_config);
         self
     }
 
     #[inline]
     pub fn rpc_opts(mut self, rpc_opts: RpcOptions) -> Self {
-        self.rpc_builder = self.rpc_builder.rpc_opts(rpc_opts);
+        self.rpc_builder.rpc_opts(rpc_opts);
         self
     }
 
     pub fn build(self) -> StandaloneImpl {
         StandaloneImpl {
-            rpc_client: self.rpc_builder.build(),
+            rpc_client: self.rpc_builder.build(self.endpoint),
         }
     }
 }
