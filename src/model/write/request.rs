@@ -49,12 +49,19 @@ impl WriteRequestBuilder {
     }
 
     pub fn build(self) -> WriteRequest {
+        let mut partitions_by_metric: HashMap<_, Vec<_>> = HashMap::new();
+        for (_, entry) in self.write_entries.into_iter() {
+            let partition = match partitions_by_metric.get_mut(&entry.series.metric) {
+                Some(p) => p,
+                None => partitions_by_metric
+                    .entry(entry.series.metric.clone())
+                    .or_insert_with(Vec::new),
+            };
+            partition.push(entry);
+        }
+
         WriteRequest {
-            write_entries: self
-                .write_entries
-                .into_iter()
-                .map(|(_, entry)| entry)
-                .collect(),
+            write_entries: partitions_by_metric,
         }
     }
 }
@@ -164,13 +171,7 @@ fn make_series_key(metric: &str, tags: &BTreeMap<String, Value>) -> SeriesKey {
 
 #[derive(Clone, Debug)]
 pub struct WriteRequest {
-    pub write_entries: Vec<WriteEntry>,
-}
-
-impl WriteRequest {
-    pub fn entry(&mut self, entry: WriteEntry) {
-        self.write_entries.push(entry);
-    }
+    pub write_entries:  HashMap<String, Vec<WriteEntry>>,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -222,26 +223,14 @@ impl From<WriteRequest> for WriteRequestPb {
     fn from(mut req: WriteRequest) -> Self {
         let mut req_pb = WriteRequestPb::default();
         // partition the write entries first
-        let mut partitions_by_metric: HashMap<_, Vec<_>> = HashMap::new();
-        for (idx, entry) in req.write_entries.iter().enumerate() {
-            let partition = match partitions_by_metric.get_mut(&entry.series.metric) {
-                Some(p) => p,
-                None => partitions_by_metric
-                    .entry(entry.series.metric.clone())
-                    .or_insert_with(Vec::new),
-            };
-            partition.push(idx);
-        }
-
-        let mut write_metrics = Vec::with_capacity(partitions_by_metric.len());
-        for (metric, entry_idxs) in partitions_by_metric {
-            write_metrics.push(convert_one_write_metric(
+        let mut write_metrics_pb = Vec::with_capacity(req.write_entries.len());
+        for (metric, entries) in req.write_entries {
+            write_metrics_pb.push(convert_one_write_metric(
                 metric,
-                &entry_idxs,
-                &mut req.write_entries,
+                entries
             ));
         }
-        req_pb.set_metrics(write_metrics.into());
+        req_pb.set_metrics(write_metrics_pb.into());
 
         req_pb
     }
@@ -249,28 +238,25 @@ impl From<WriteRequest> for WriteRequestPb {
 
 fn convert_one_write_metric(
     metric: String,
-    entry_idxs: &[usize],
-    entries: &mut [WriteEntry],
+    entries: Vec<WriteEntry>,
 ) -> WriteMetricPb {
     let mut write_metric_pb = WriteMetricPb::default();
 
     let mut tags_dict = NameDict::new();
     let mut fields_dict = NameDict::new();
-    let mut wirte_entries = Vec::with_capacity(entry_idxs.len());
-    for idx in entry_idxs {
-        assert!(*idx < entries.len());
-        // directly take entry from entries to avoid cloning
-        wirte_entries.push(convert_entry(
+    let mut wirte_entries_pb = Vec::with_capacity(entries.len());
+    for entry in entries {
+        wirte_entries_pb.push(convert_entry(
             &mut tags_dict,
             &mut fields_dict,
-            mem::take(&mut entries[*idx]),
+            entry,
         ));
     }
 
     write_metric_pb.set_metric(metric);
     write_metric_pb.set_tag_names(tags_dict.convert_ordered().into());
     write_metric_pb.set_field_names(fields_dict.convert_ordered().into());
-    write_metric_pb.set_entries(wirte_entries.into());
+    write_metric_pb.set_entries(wirte_entries_pb.into());
 
     write_metric_pb
 }
@@ -433,7 +419,7 @@ mod test {
         let wreq = wreq_builder.build();
 
         // check build result
-        assert_eq!(wreq.write_entries.len(), 3);
+        assert_eq!(wreq.write_entries.len(), 2);
         let tmp_tags1 = vec![
             (test_tag1.0.to_owned(), Value::Int32(test_tag1.1)),
             (
@@ -459,7 +445,11 @@ mod test {
         let series_key1 = make_series_key(test_metric, &tags1);
         let series_key2 = make_series_key(test_metric, &tags2);
         let series_key3 = make_series_key(test_metric2, &tags1);
-        for entry in &wreq.write_entries {
+        let write_entries: Vec<_> = wreq.write_entries
+            .iter().map(|(_, entries)| entries.iter())
+            .flatten()
+            .collect();
+        for entry in write_entries {
             let series_key = make_series_key(entry.series.metric.as_str(), &entry.series.tags);
             if series_key == series_key1 {
                 assert_eq!(
