@@ -2,9 +2,19 @@
 
 //! Write response.
 
+use ceresdbproto::storage::WriteResponse as WriteResponsePb;
+
 #[derive(Debug)]
-pub struct WriteResult {
-    pub metrics: Vec<String>,
+pub struct WriteResponse {
     pub success: u32,
     pub failed: u32,
+}
+
+impl From<WriteResponsePb> for WriteResponse {
+    fn from(resp_pb: WriteResponsePb) -> Self {
+        WriteResponse {
+            success: resp_pb.success,
+            failed: resp_pb.failed,
+        }
+    }
 }

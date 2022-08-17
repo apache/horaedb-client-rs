@@ -4,4 +4,4 @@ mod request;
 mod response;
 
 pub use request::{is_reserved_column_name, WriteEntry, WriteRequest, WriteRequestBuilder};
-pub use response::WriteResult;
+pub use response::WriteResponse;

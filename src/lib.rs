@@ -4,7 +4,7 @@ pub mod db_client;
 pub mod errors;
 pub mod model;
 pub mod options;
-mod route_client;
+mod router;
 pub mod rpc_client;
 
 pub use crate::{

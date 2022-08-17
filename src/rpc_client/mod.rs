@@ -4,18 +4,15 @@ mod grpc_client;
 mod mock_rpc_client;
 
 use async_trait::async_trait;
+use ceresdbproto::storage::{
+    QueryRequest as QueryRequestPb, QueryResponse as QueryResponsePb,
+    RouteRequest as RouteRequestPb, RouteResponse as RouteResponsePb,
+    WriteRequest as WriteRequestPb, WriteResponse as WriteResponsePb,
+};
 pub use grpc_client::{GrpcClient, GrpcClientBuilder};
 pub use mock_rpc_client::MockRpcClient;
 
-use crate::{
-    errors::Result,
-    model::{
-        request::QueryRequest,
-        route::{RouteRequest, RouteResponse},
-        write::{WriteRequest, WriteResult},
-        QueryResponse,
-    },
-};
+use crate::errors::Result;
 
 /// Context for rpc request.
 #[derive(Clone, Debug)]
@@ -32,7 +29,7 @@ impl RpcContext {
 
 #[async_trait]
 pub trait RpcClient: Send + Sync {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse>;
-    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResult>;
-    async fn route(&self, ctx: &RpcContext, req: &RouteRequest) -> Result<RouteResponse>;
+    async fn query(&self, ctx: &RpcContext, req: &QueryRequestPb) -> Result<QueryResponsePb>;
+    async fn write(&self, ctx: &RpcContext, req: &WriteRequestPb) -> Result<WriteResponsePb>;
+    async fn route(&self, ctx: &RpcContext, req: &RouteRequestPb) -> Result<RouteResponsePb>;
 }

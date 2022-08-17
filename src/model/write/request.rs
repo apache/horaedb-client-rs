@@ -164,7 +164,7 @@ fn make_series_key(metric: &str, tags: &BTreeMap<String, Value>) -> SeriesKey {
 
 #[derive(Clone, Debug)]
 pub struct WriteRequest {
-    write_entries: Vec<WriteEntry>,
+    pub write_entries: Vec<WriteEntry>,
 }
 
 impl WriteRequest {
@@ -175,13 +175,13 @@ impl WriteRequest {
 
 #[derive(Clone, Default, Debug)]
 pub struct WriteEntry {
-    series: Series,
+    pub series: Series,
     ts_fields: BTreeMap<TimestampMs, Fields>,
 }
 
 #[derive(Clone, Default, Debug)]
-struct Series {
-    metric: String,
+pub struct Series {
+    pub(crate) metric: String,
     tags: BTreeMap<String, Value>,
 }
 

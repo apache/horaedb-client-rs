@@ -3,18 +3,18 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use ceresdbproto::{storage::WriteRequest as WriteRequestPb, storage_grpc::StorageServiceClient};
-use grpcio::{CallOption, ChannelBuilder, EnvBuilder, MetadataBuilder, Environment};
+use ceresdbproto::{
+    storage::{
+        QueryRequest as QueryRequestPb, QueryResponse as QueryResponsePb,
+        RouteRequest as RouteRequestPb, RouteResponse as RouteResponsePb,
+        WriteRequest as WriteRequestPb, WriteResponse as WriteResponsePb,
+    },
+    storage_grpc::StorageServiceClient,
+};
+use grpcio::{CallOption, ChannelBuilder, EnvBuilder, Environment, MetadataBuilder};
 
 use crate::{
     errors::{self, Error, Result, ServerError},
-    model::{
-        convert,
-        request::QueryRequest,
-        route::{RouteRequest, RouteResponse, EndPoint},
-        row::QueryResponse,
-        write::{WriteRequest, WriteResult},
-    },
     options::{GrpcConfig, RpcOptions},
     rpc_client::{RpcClient, RpcContext},
 };
@@ -42,12 +42,9 @@ impl GrpcClient {
             .headers(headers))
     }
 
-    pub async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse> {
+    pub async fn query(&self, ctx: &RpcContext, req: &QueryRequestPb) -> Result<QueryResponsePb> {
         let call_opt = self.make_call_option(ctx)?;
-        let mut resp = self
-            .raw_client
-            .query_async_opt(&req.clone().into(), call_opt)?
-            .await?;
+        let mut resp = self.raw_client.query_async_opt(req, call_opt)?.await?;
 
         if !errors::is_ok(resp.get_header().code) {
             let header = resp.take_header();
@@ -58,19 +55,17 @@ impl GrpcClient {
         }
 
         if resp.schema_content.is_empty() {
-            let mut r = QueryResponse::default();
+            let mut r = QueryResponsePb::default();
             r.affected_rows = resp.affected_rows;
             return Ok(r);
         }
 
-        convert::parse_queried_rows(&resp.schema_content, &resp.rows).map_err(Error::Client)
+        Ok(resp)
     }
 
-    pub async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResult> {
+    pub async fn write(&self, ctx: &RpcContext, req: &WriteRequestPb) -> Result<WriteResponsePb> {
         let call_opt = self.make_call_option(ctx)?;
-        let req_pb: WriteRequestPb = req.clone().into();
-
-        let mut resp = self.raw_client.write_async_opt(&req_pb, call_opt)?.await?;
+        let mut resp = self.raw_client.write_async_opt(req, call_opt)?.await?;
         if !errors::is_ok(resp.get_header().code) {
             let header = resp.take_header();
             return Err(Error::Server(ServerError {
@@ -79,26 +74,21 @@ impl GrpcClient {
             }));
         }
 
-        let metrics: Vec<_> = req_pb.metrics.into_iter().map(|e| e.metric).collect();
-        Ok(WriteResult {
-            metrics,
-            success: resp.success,
-            failed: resp.failed,
-        })
+        Ok(resp)
     }
 }
 
 #[async_trait]
 impl RpcClient for GrpcClient {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse> {
+    async fn query(&self, ctx: &RpcContext, req: &QueryRequestPb) -> Result<QueryResponsePb> {
         self.query(ctx, req).await
     }
 
-    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResult> {
+    async fn write(&self, ctx: &RpcContext, req: &WriteRequestPb) -> Result<WriteResponsePb> {
         self.write(ctx, req).await
     }
 
-    async fn route(&self, ctx: &RpcContext, req: &RouteRequest) -> Result<RouteResponse> {
+    async fn route(&self, ctx: &RpcContext, req: &RouteRequestPb) -> Result<RouteResponsePb> {
         todo!()
     }
 }

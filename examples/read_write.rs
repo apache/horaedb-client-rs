@@ -1,8 +1,9 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
 use ceresdb_client_rs::{
-    model::{request::QueryRequest, value::Value, write::WriteRequestBuilder},
-    DbClient, StandaloneImplBuilder, rpc_client::RpcContext,
+    model::{request::QueryRequestPb, value::Value, write::WriteRequestBuilder},
+    rpc_client::RpcContext,
+    DbClient, GrpcConfig, StandaloneImplBuilder,
 };
 use chrono::Local;
 
@@ -16,7 +17,7 @@ async fn create_table(client: &impl DbClient, rpc_ctx: &RpcContext) {
                 bin_field varbinary,
                 t timestamp NOT NULL,
                 TIMESTAMP KEY(t)) ENGINE=Analytic with (enable_ttl='false')"#;
-    let req = QueryRequest {
+    let req = QueryRequestPb {
         metrics: vec!["ceresdb".to_string()],
         ql: create_table_sql.to_string(),
     };
@@ -26,7 +27,7 @@ async fn create_table(client: &impl DbClient, rpc_ctx: &RpcContext) {
 
 async fn drop_table(client: &impl DbClient, rpc_ctx: &RpcContext) {
     let drop_table_sql = "DROP TABLE ceresdb";
-    let req = QueryRequest {
+    let req = QueryRequestPb {
         metrics: vec!["ceresdb".to_string()],
         ql: drop_table_sql.to_string(),
     };
@@ -88,7 +89,7 @@ async fn write(client: &impl DbClient, rpc_ctx: &RpcContext) {
 }
 
 async fn query(client: &impl DbClient, rpc_ctx: &RpcContext) {
-    let req = QueryRequest {
+    let req = QueryRequestPb {
         metrics: vec!["ceresdb".to_string()],
         ql: "select * from ceresdb;".to_string(),
     };
@@ -109,7 +110,9 @@ async fn query(client: &impl DbClient, rpc_ctx: &RpcContext) {
 #[tokio::main]
 async fn main() {
     // you should ensure ceresdb is running, and grpc port is set to 8831
-    let client = StandaloneImplBuilder::new("127.0.0.1:8831".to_string(), 1).build();
+    let client = StandaloneImplBuilder::new(1)
+        .grpc_config(GrpcConfig::default())
+        .build("127.0.0.1:8831".to_string());
     let rpc_ctx = RpcContext::new("public".to_string(), "".to_string());
 
     println!("------------------------------------------------------------------");
