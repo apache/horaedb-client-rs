@@ -8,6 +8,10 @@ pub enum Error {
     /// Note that any error caused by a running server wont be wrapped in the
     /// grpc errors.
     Rpc(grpcio::Error),
+    /// Error about rpc.
+    /// It will be throw while connection between client and server is broken
+    /// and try for reconnecting is failed(timeout).
+    Connect(String),
     /// Error from the client and basically the rpc request has not been called
     /// yet or the rpc request has already been finished successfully.
     Client(String),

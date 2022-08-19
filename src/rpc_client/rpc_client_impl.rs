@@ -11,7 +11,7 @@ use ceresdbproto::{
     },
     storage_grpc::StorageServiceClient,
 };
-use grpcio::{CallOption, ChannelBuilder, EnvBuilder, Environment, MetadataBuilder};
+use grpcio::{CallOption, Channel, ChannelBuilder, EnvBuilder, Environment, MetadataBuilder};
 
 use crate::{
     errors::{self, Error, Result, ServerError},
@@ -26,11 +26,14 @@ const RPC_HEADER_TENANT_KEY: &str = "x-ceresdb-access-tenant";
 pub struct RpcClientImpl {
     raw_client: Arc<StorageServiceClient>,
     rpc_opts: RpcOptions,
+    channel: Channel,
 }
 
 #[async_trait]
 impl RpcClient for RpcClientImpl {
     async fn query(&self, ctx: &RpcContext, req: &QueryRequestPb) -> Result<QueryResponsePb> {
+        self.check_connectivity().await?;
+
         let call_opt = self.make_call_option(ctx)?;
         let mut resp = self.raw_client.query_async_opt(req, call_opt)?.await?;
 
@@ -52,6 +55,8 @@ impl RpcClient for RpcClientImpl {
     }
 
     async fn write(&self, ctx: &RpcContext, req: &WriteRequestPb) -> Result<WriteResponsePb> {
+        self.check_connectivity().await?;
+
         let call_opt = self.make_call_option(ctx)?;
         let mut resp = self.raw_client.write_async_opt(req, call_opt)?.await?;
         if !errors::is_ok(resp.get_header().code) {
@@ -66,6 +71,8 @@ impl RpcClient for RpcClientImpl {
     }
 
     async fn route(&self, ctx: &RpcContext, req: &RouteRequestPb) -> Result<RouteResponsePb> {
+        self.check_connectivity().await?;
+
         let call_opt = self.make_call_option(ctx)?;
         let mut resp = self.raw_client.route_async_opt(req, call_opt)?.await?;
         if !errors::is_ok(resp.get_header().code) {
@@ -93,18 +100,32 @@ impl RpcClientImpl {
             .timeout(self.rpc_opts.read_timeout)
             .headers(headers))
     }
+
+    async fn check_connectivity(&self) -> Result<()> {
+        if !self
+            .channel
+            .wait_for_connected(self.rpc_opts.connect_timeout)
+            .await
+        {
+            return Err(Error::Connect(
+                "Connection broken and try for reconnecting failed".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
 }
 
 /// Builder for building an [`Client`].
 #[derive(Clone)]
-pub struct GrpcClientBuilder {
+pub struct RpcClientImplBuilder {
     rpc_opts: RpcOptions,
     grpc_config: RpcConfig,
     env: Arc<Environment>,
 }
 
 #[allow(clippy::return_self_not_must_use)]
-impl GrpcClientBuilder {
+impl RpcClientImplBuilder {
     pub fn new(grpc_config: RpcConfig, rpc_opts: RpcOptions) -> Self {
         let env = {
             let mut env_builder = EnvBuilder::new();
@@ -129,10 +150,12 @@ impl GrpcClientBuilder {
             .keepalive_time(self.grpc_config.keepalive_time)
             .keepalive_timeout(self.grpc_config.keepalive_timeout)
             .connect(&endpoint);
+        let channel_clone = channel.clone();
         let raw_client = Arc::new(StorageServiceClient::new(channel));
         RpcClientImpl {
             raw_client,
             rpc_opts: self.rpc_opts.clone(),
+            channel: channel_clone,
         }
     }
 }

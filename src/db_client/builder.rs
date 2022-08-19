@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use super::{cluster::ClusterImpl, standalone::StandaloneImpl, DbClient};
-use crate::{router::RouterImpl, rpc_client::GrpcClientBuilder, RpcConfig, RpcOptions};
+use crate::{router::RouterImpl, rpc_client::RpcClientImplBuilder, RpcConfig, RpcOptions};
 
 pub enum Mode {
     Strandalone,
@@ -46,7 +46,7 @@ impl Builder {
     }
 
     pub fn build(self) -> Arc<dyn DbClient> {
-        let rpc_client_builder = GrpcClientBuilder::new(self.grpc_config, self.rpc_opts);
+        let rpc_client_builder = RpcClientImplBuilder::new(self.grpc_config, self.rpc_opts);
 
         match self.mode {
             Mode::Strandalone => {

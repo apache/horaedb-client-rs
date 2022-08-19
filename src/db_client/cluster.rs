@@ -13,7 +13,7 @@ use crate::{
     errors::should_refresh,
     model::{request::QueryRequest, route::Endpoint, write::WriteRequest},
     router::Router,
-    rpc_client::{GrpcClientBuilder, RpcClientImpl, RpcContext},
+    rpc_client::{RpcClientImpl, RpcClientImplBuilder, RpcContext},
     Error,
 };
 
@@ -133,7 +133,7 @@ impl<R: Router> DbClient for ClusterImpl<R> {
 }
 
 impl<R: Router> ClusterImpl<R> {
-    pub fn new(route_client: R, standalone_buidler: GrpcClientBuilder) -> Self {
+    pub fn new(route_client: R, standalone_buidler: RpcClientImplBuilder) -> Self {
         Self {
             router: route_client,
             standalone_pool: StandalonePool::new(standalone_buidler),
@@ -143,12 +143,12 @@ impl<R: Router> ClusterImpl<R> {
 
 struct StandalonePool {
     pool: DashMap<Endpoint, Arc<StandaloneImpl<RpcClientImpl>>>,
-    standalone_buidler: GrpcClientBuilder,
+    standalone_buidler: RpcClientImplBuilder,
 }
 
 // TODO better to add gc.
 impl StandalonePool {
-    fn new(standalone_buidler: GrpcClientBuilder) -> Self {
+    fn new(standalone_buidler: RpcClientImplBuilder) -> Self {
         Self {
             pool: DashMap::new(),
             standalone_buidler,

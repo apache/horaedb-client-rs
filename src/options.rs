@@ -33,6 +33,7 @@ impl Default for RpcConfig {
 pub struct RpcOptions {
     pub write_timeout: Duration,
     pub read_timeout: Duration,
+    pub connect_timeout: Duration,
 }
 
 impl Default for RpcOptions {
@@ -40,6 +41,7 @@ impl Default for RpcOptions {
         Self {
             write_timeout: Duration::from_secs(5),
             read_timeout: Duration::from_secs(60),
+            connect_timeout: Duration::from_secs(3),
         }
     }
 }
