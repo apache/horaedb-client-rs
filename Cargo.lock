@@ -148,6 +148,7 @@ dependencies = [
  "chrono",
  "common_types",
  "dashmap",
+ "futures",
  "grpcio",
  "tokio",
 ]

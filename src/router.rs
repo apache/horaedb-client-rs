@@ -1,7 +1,9 @@
+// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
+
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use ceresdbproto::storage::{Endpoint as EndpointPb, Route, RouteRequest, RouteResponse};
+use ceresdbproto::storage::RouteRequest;
 use dashmap::DashMap;
 
 use crate::{
@@ -11,23 +13,23 @@ use crate::{
     Error,
 };
 
+/// Used to route metrics to endpoints.
 #[async_trait]
-pub trait Router {
-    /// Route metrics.
-    ///
-    /// we can set force_refresh for getting endpoints from server directly
-    /// and update cache after.
-    /// Otherwise, it will get target endpoints  from cache(if exist) firstly
-    /// and get from server only when they not exist in local cache.
-    async fn route(
-        &self,
-        metrics: &[String],
-        ctx: &RpcContext,
-        force_refresh: bool,
-    ) -> Result<Vec<Option<Endpoint>>>;
+pub trait Router: Send + Sync {
+    async fn route(&self, metrics: &[String], ctx: &RpcContext) -> Result<Vec<Option<Endpoint>>>;
+
+    fn evict(&self, metrics: &[String]);
 }
 
-struct RouterImpl<R: RpcClient> {
+/// Implementation for [`Router`].
+/// 
+/// There is cache in [`RouterImpl`], it will return endpoints in cache first.
+/// If returned endpoints is outdated, you should call [`evict`] to remove them.
+/// And [`RouterImpl`] will fetch new endpoints when you call ['route'] again.
+/// 
+/// [`route`]: RouterImpl::route
+/// [`evict`]: RouterImpl::evict
+pub struct RouterImpl<R: RpcClient> {
     cache: DashMap<String, Endpoint>,
     rpc_client: R,
 }
@@ -43,19 +45,14 @@ impl<R: RpcClient> RouterImpl<R> {
 
 #[async_trait]
 impl<R: RpcClient> Router for RouterImpl<R> {
-    async fn route(
-        &self,
-        metrics: &[String],
-        ctx: &RpcContext,
-        force_refresh: bool,
-    ) -> Result<Vec<Option<Endpoint>>> {
+    async fn route(&self, metrics: &[String], ctx: &RpcContext) -> Result<Vec<Option<Endpoint>>> {
         let mut target_endpoints = vec![None; metrics.len()];
 
         // Find from cache firstly (if force_refresh is false),
         // and collect misses.
-        let misses = if !force_refresh {
+        let misses = {
             let mut misses = HashMap::new();
-            for (idx, metric) in metrics.into_iter().enumerate() {
+            for (idx, metric) in metrics.iter().enumerate() {
                 match self.cache.get(metric) {
                     Some(pair) => {
                         target_endpoints[idx] = Some(pair.value().clone());
@@ -63,7 +60,7 @@ impl<R: RpcClient> Router for RouterImpl<R> {
 
                     None => {
                         // There should not be duplicated metric in metrics
-                        if let Some(_) = misses.insert(metric.clone(), idx) {
+                        if misses.insert(metric.clone(), idx).is_some() {
                             return Err(Error::Unknown(format!(
                                 "Route duplicated metric:{}",
                                 metric
@@ -73,12 +70,6 @@ impl<R: RpcClient> Router for RouterImpl<R> {
                 }
             }
             misses
-        } else {
-            metrics
-                .into_iter()
-                .enumerate()
-                .map(|(idx, m)| (m.clone(), idx))
-                .collect()
         };
 
         // Get endpoints of misses from remote.
@@ -104,6 +95,12 @@ impl<R: RpcClient> Router for RouterImpl<R> {
         }
 
         Ok(target_endpoints)
+    }
+
+    fn evict(&self, metrics: &[String]) {
+        metrics.iter().for_each(|e| {
+            self.cache.remove(e.as_str());
+        })
     }
 }
 
@@ -146,44 +143,23 @@ mod test {
         let ctx = RpcContext::new("test".to_string(), "".to_string());
         let metrics = vec![metric1.clone(), metric2.clone()];
         let route_client = RouterImpl::new(mock_rpc_client);
-        let route_res1 = route_client
-            .route(&metrics, &ctx, false)
-            .await
-            .unwrap();
-        let a =  
-        assert_eq!(
-            &endpoint1,
-            route_res1.get(0).unwrap().as_ref().unwrap()
-        );
-        assert_eq!(
-            &endpoint2,
-            route_res1.get(1).unwrap().as_ref().unwrap()
-        );
+        let route_res1 = route_client.route(&metrics, &ctx).await.unwrap();
+        assert_eq!(&endpoint1, route_res1.get(0).unwrap().as_ref().unwrap());
+        assert_eq!(&endpoint2, route_res1.get(1).unwrap().as_ref().unwrap());
 
-        let route_res2 = route_client
-            .route(&metrics, &ctx, false)
-            .await
-            .unwrap();
-        assert_eq!(
-            &endpoint1,
-            route_res2.get(0).unwrap().as_ref().unwrap()
-        );
-        assert_eq!(
-            &endpoint2,
-            route_res2.get(1).unwrap().as_ref().unwrap()
-        );
+        route_table
+            .insert(metric1.clone(), endpoint3.clone());
+        route_table
+            .insert(metric2.clone(), endpoint4.clone());
 
-        let route_res3 = route_client
-            .route(&metrics, &ctx, true)
-            .await
-            .unwrap();
-        assert_eq!(
-            &endpoint3,
-            route_res3.get(0).unwrap().as_ref().unwrap()
-        );
-        assert_eq!(
-            &endpoint4,
-            route_res3.get(1).unwrap().as_ref().unwrap()
-        );
+        let route_res2 = route_client.route(&metrics, &ctx).await.unwrap();
+        assert_eq!(&endpoint1, route_res2.get(0).unwrap().as_ref().unwrap());
+        assert_eq!(&endpoint2, route_res2.get(1).unwrap().as_ref().unwrap());
+
+        route_client.evict(&[metric1.clone(), metric2.clone()]);
+
+        let route_res3 = route_client.route(&metrics, &ctx).await.unwrap();
+        assert_eq!(&endpoint3, route_res3.get(0).unwrap().as_ref().unwrap());
+        assert_eq!(&endpoint4, route_res3.get(1).unwrap().as_ref().unwrap());
     }
 }

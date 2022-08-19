@@ -1,4 +1,6 @@
-use std::{collections::HashMap, sync::Arc};
+// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
+
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use ceresdbproto::storage::{
@@ -11,6 +13,7 @@ use dashmap::DashMap;
 use crate::{
     model::route::Endpoint,
     rpc_client::{RpcClient, RpcContext},
+    Result
 };
 
 /// Rpc client used for testing.
@@ -24,7 +27,7 @@ impl RpcClient for MockRpcClient {
         &self,
         _ctx: &RpcContext,
         _req: &QueryRequestPb,
-    ) -> crate::Result<QueryResponsePb> {
+    ) -> Result<QueryResponsePb> {
         todo!()
     }
 
@@ -32,7 +35,7 @@ impl RpcClient for MockRpcClient {
         &self,
         _ctx: &RpcContext,
         _req: &WriteRequestPb,
-    ) -> crate::Result<WriteResponsePb> {
+    ) -> Result<WriteResponsePb> {
         todo!()
     }
 
@@ -40,7 +43,7 @@ impl RpcClient for MockRpcClient {
         &self,
         _ctx: &RpcContext,
         req: &RouteRequestPb,
-    ) -> crate::Result<RouteResponsePb> {
+    ) -> Result<RouteResponsePb> {
         let route_tables = self.route_table.clone();
         let routes: Vec<_> = req
             .metrics

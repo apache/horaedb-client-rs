@@ -1,13 +1,16 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+use std::sync::Arc;
+
 use ceresdb_client_rs::{
-    model::{request::QueryRequestPb, value::Value, write::WriteRequestBuilder},
-    rpc_client::RpcContext,
-    DbClient, GrpcConfig, StandaloneImplBuilder,
+    db_client::{ Mode, Builder, DbClient},
+    model::{request::QueryRequest, value::Value, write::WriteRequestBuilder},
+    RpcContext,
+    RpcConfig,
 };
 use chrono::Local;
 
-async fn create_table(client: &impl DbClient, rpc_ctx: &RpcContext) {
+async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let create_table_sql = r#"CREATE TABLE ceresdb (
                 str_tag string TAG,
                 int_tag int32 TAG,
@@ -17,25 +20,25 @@ async fn create_table(client: &impl DbClient, rpc_ctx: &RpcContext) {
                 bin_field varbinary,
                 t timestamp NOT NULL,
                 TIMESTAMP KEY(t)) ENGINE=Analytic with (enable_ttl='false')"#;
-    let req = QueryRequestPb {
+    let req = QueryRequest {
         metrics: vec!["ceresdb".to_string()],
         ql: create_table_sql.to_string(),
     };
-    let _resp = client.query(rpc_ctx, &req).await.unwrap();
+    let _resp = client.query(rpc_ctx, &req).await;
     println!("Create table success!");
 }
 
-async fn drop_table(client: &impl DbClient, rpc_ctx: &RpcContext) {
+async fn drop_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let drop_table_sql = "DROP TABLE ceresdb";
-    let req = QueryRequestPb {
+    let req = QueryRequest {
         metrics: vec!["ceresdb".to_string()],
         ql: drop_table_sql.to_string(),
     };
-    let _resp = client.query(rpc_ctx, &req).await.unwrap();
+    let _resp = client.query(rpc_ctx, &req).await;
     println!("Drop table success!");
 }
 
-async fn write(client: &impl DbClient, rpc_ctx: &RpcContext) {
+async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let ts1 = Local::now().timestamp_millis();
     let mut write_req_builder = WriteRequestBuilder::default();
     // first row
@@ -85,22 +88,27 @@ async fn write(client: &impl DbClient, rpc_ctx: &RpcContext) {
 
     let write_req = write_req_builder.build();
     let res = client.write(rpc_ctx, &write_req).await;
-    println!("{:?}", res);
+    println!(
+        "Metrcis:{:?}, result:{:?}",
+        res[0].metrics,
+        res[0].result.as_ref().unwrap()
+    );
 }
 
-async fn query(client: &impl DbClient, rpc_ctx: &RpcContext) {
-    let req = QueryRequestPb {
+async fn query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
+    let req = QueryRequest {
         metrics: vec!["ceresdb".to_string()],
         ql: "select * from ceresdb;".to_string(),
     };
-    let resp = client.query(rpc_ctx, &req).await.unwrap();
-    println!("Rows in the resp:{:?}", resp);
+    let resps = client.query(rpc_ctx, &req).await;
+    let resp = resps.get(0).unwrap();
+    println!("Rows in the resp:{:?}", resp.result.as_ref().unwrap());
 
-    for (row_id, row) in resp.rows.iter().enumerate() {
+    for (row_id, row) in resp.result.as_ref().unwrap().rows.iter().enumerate() {
         let format_row: Vec<_> = row
             .datums
             .iter()
-            .zip(resp.schema.column_schemas.iter())
+            .zip(resp.result.as_ref().unwrap().schema.column_schemas.iter())
             .map(|(datum, col_schema)| format!("{:?}:{:?}", col_schema.name, datum))
             .collect();
         println!("row{}:{:?}", row_id, format_row);
@@ -110,9 +118,9 @@ async fn query(client: &impl DbClient, rpc_ctx: &RpcContext) {
 #[tokio::main]
 async fn main() {
     // you should ensure ceresdb is running, and grpc port is set to 8831
-    let client = StandaloneImplBuilder::new(1)
-        .grpc_config(GrpcConfig::default())
-        .build("127.0.0.1:8831".to_string());
+    let client = Builder::new("127.0.0.1:8831".to_string(), Mode::Strandalone)
+        .grpc_config(RpcConfig::default())
+        .build();
     let rpc_ctx = RpcContext::new("public".to_string(), "".to_string());
 
     println!("------------------------------------------------------------------");

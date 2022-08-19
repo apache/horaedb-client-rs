@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
-pub struct GrpcConfig {
+pub struct RpcConfig {
     /// Set the thread num as the cpu cores number if not set.
     pub thread_num: Option<usize>,
     /// -1 means unlimited
@@ -14,7 +14,7 @@ pub struct GrpcConfig {
     pub keepalive_timeout: Duration,
 }
 
-impl Default for GrpcConfig {
+impl Default for RpcConfig {
     fn default() -> Self {
         Self {
             thread_num: None,

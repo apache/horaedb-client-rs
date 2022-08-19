@@ -9,6 +9,7 @@ async-trait = "0.1.57"
 grpcio = "0.9.1"
 avro-rs = "0.13.0"
 dashmap = "5.3.4"
+futures = "0.3"
 
 [dependencies.ceresdbproto]
 git = "https://github.com/CeresDB/ceresdbproto.git"

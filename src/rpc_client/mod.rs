@@ -1,6 +1,6 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-mod grpc_client;
+mod rpc_client_impl;
 mod mock_rpc_client;
 
 use async_trait::async_trait;
@@ -9,7 +9,7 @@ use ceresdbproto::storage::{
     RouteRequest as RouteRequestPb, RouteResponse as RouteResponsePb,
     WriteRequest as WriteRequestPb, WriteResponse as WriteResponsePb,
 };
-pub use grpc_client::{GrpcClient, GrpcClientBuilder};
+pub use rpc_client_impl::{RpcClientImpl, GrpcClientBuilder};
 pub use mock_rpc_client::MockRpcClient;
 
 use crate::errors::Result;

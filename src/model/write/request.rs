@@ -4,7 +4,6 @@
 
 use std::{
     collections::{BTreeMap, HashMap},
-    mem,
 };
 
 use ceresdbproto::storage::{
@@ -169,9 +168,9 @@ fn make_series_key(metric: &str, tags: &BTreeMap<String, Value>) -> SeriesKey {
     series_key
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WriteRequest {
-    pub write_entries:  HashMap<String, Vec<WriteEntry>>,
+    pub write_entries: HashMap<String, Vec<WriteEntry>>,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -220,15 +219,12 @@ impl NameDict {
 }
 
 impl From<WriteRequest> for WriteRequestPb {
-    fn from(mut req: WriteRequest) -> Self {
+    fn from(req: WriteRequest) -> Self {
         let mut req_pb = WriteRequestPb::default();
         // partition the write entries first
         let mut write_metrics_pb = Vec::with_capacity(req.write_entries.len());
         for (metric, entries) in req.write_entries {
-            write_metrics_pb.push(convert_one_write_metric(
-                metric,
-                entries
-            ));
+            write_metrics_pb.push(convert_one_write_metric(metric, entries));
         }
         req_pb.set_metrics(write_metrics_pb.into());
 
@@ -236,21 +232,14 @@ impl From<WriteRequest> for WriteRequestPb {
     }
 }
 
-fn convert_one_write_metric(
-    metric: String,
-    entries: Vec<WriteEntry>,
-) -> WriteMetricPb {
+fn convert_one_write_metric(metric: String, entries: Vec<WriteEntry>) -> WriteMetricPb {
     let mut write_metric_pb = WriteMetricPb::default();
 
     let mut tags_dict = NameDict::new();
     let mut fields_dict = NameDict::new();
     let mut wirte_entries_pb = Vec::with_capacity(entries.len());
     for entry in entries {
-        wirte_entries_pb.push(convert_entry(
-            &mut tags_dict,
-            &mut fields_dict,
-            entry,
-        ));
+        wirte_entries_pb.push(convert_entry(&mut tags_dict, &mut fields_dict, entry));
     }
 
     write_metric_pb.set_metric(metric);
@@ -445,9 +434,10 @@ mod test {
         let series_key1 = make_series_key(test_metric, &tags1);
         let series_key2 = make_series_key(test_metric, &tags2);
         let series_key3 = make_series_key(test_metric2, &tags1);
-        let write_entries: Vec<_> = wreq.write_entries
-            .iter().map(|(_, entries)| entries.iter())
-            .flatten()
+        let write_entries: Vec<_> = wreq
+            .write_entries
+            .iter()
+            .flat_map(|(_, entries)| entries.iter())
             .collect();
         for entry in write_entries {
             let series_key = make_series_key(entry.series.metric.as_str(), &entry.series.tags);
