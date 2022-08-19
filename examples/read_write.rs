@@ -3,10 +3,9 @@
 use std::sync::Arc;
 
 use ceresdb_client_rs::{
-    db_client::{ Mode, Builder, DbClient},
+    db_client::{Builder, DbClient, Mode},
     model::{request::QueryRequest, value::Value, write::WriteRequestBuilder},
-    RpcContext,
-    RpcConfig,
+    RpcConfig, RpcContext,
 };
 use chrono::Local;
 

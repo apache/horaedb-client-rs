@@ -22,11 +22,11 @@ pub trait Router: Send + Sync {
 }
 
 /// Implementation for [`Router`].
-/// 
+///
 /// There is cache in [`RouterImpl`], it will return endpoints in cache first.
 /// If returned endpoints is outdated, you should call [`evict`] to remove them.
 /// And [`RouterImpl`] will fetch new endpoints when you call ['route'] again.
-/// 
+///
 /// [`route`]: RouterImpl::route
 /// [`evict`]: RouterImpl::evict
 pub struct RouterImpl<R: RpcClient> {
@@ -73,13 +73,13 @@ impl<R: RpcClient> Router for RouterImpl<R> {
         };
 
         // Get endpoints of misses from remote.
-        let mut remote_req = RouteRequest::default();
+        let mut req = RouteRequest::default();
         let miss_metrics = misses.iter().map(|(m, _)| m.clone()).collect();
-        remote_req.set_metrics(miss_metrics);
-        let remote_resp = self.rpc_client.route(ctx, &remote_req).await?;
+        req.set_metrics(miss_metrics);
+        let resp = self.rpc_client.route(ctx, &req).await?;
 
         // Fill miss endpoint and update cache.
-        for route in remote_resp.routes {
+        for route in resp.routes {
             // Endpoint may be none, and not cache it when it is none.
             if route.endpoint.is_none() {
                 continue;
@@ -147,10 +147,8 @@ mod test {
         assert_eq!(&endpoint1, route_res1.get(0).unwrap().as_ref().unwrap());
         assert_eq!(&endpoint2, route_res1.get(1).unwrap().as_ref().unwrap());
 
-        route_table
-            .insert(metric1.clone(), endpoint3.clone());
-        route_table
-            .insert(metric2.clone(), endpoint4.clone());
+        route_table.insert(metric1.clone(), endpoint3.clone());
+        route_table.insert(metric2.clone(), endpoint4.clone());
 
         let route_res2 = route_client.route(&metrics, &ctx).await.unwrap();
         assert_eq!(&endpoint1, route_res2.get(0).unwrap().as_ref().unwrap());

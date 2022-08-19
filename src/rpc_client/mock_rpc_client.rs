@@ -13,7 +13,7 @@ use dashmap::DashMap;
 use crate::{
     model::route::Endpoint,
     rpc_client::{RpcClient, RpcContext},
-    Result
+    Result,
 };
 
 /// Rpc client used for testing.
@@ -23,27 +23,15 @@ pub struct MockRpcClient {
 
 #[async_trait]
 impl RpcClient for MockRpcClient {
-    async fn query(
-        &self,
-        _ctx: &RpcContext,
-        _req: &QueryRequestPb,
-    ) -> Result<QueryResponsePb> {
+    async fn query(&self, _ctx: &RpcContext, _req: &QueryRequestPb) -> Result<QueryResponsePb> {
         todo!()
     }
 
-    async fn write(
-        &self,
-        _ctx: &RpcContext,
-        _req: &WriteRequestPb,
-    ) -> Result<WriteResponsePb> {
+    async fn write(&self, _ctx: &RpcContext, _req: &WriteRequestPb) -> Result<WriteResponsePb> {
         todo!()
     }
 
-    async fn route(
-        &self,
-        _ctx: &RpcContext,
-        req: &RouteRequestPb,
-    ) -> Result<RouteResponsePb> {
+    async fn route(&self, _ctx: &RpcContext, req: &RouteRequestPb) -> Result<RouteResponsePb> {
         let route_tables = self.route_table.clone();
         let routes: Vec<_> = req
             .metrics

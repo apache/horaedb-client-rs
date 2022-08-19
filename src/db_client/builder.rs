@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use super::{DbClient, cluster::ClusterImpl, standalone::StandaloneImpl};
+use super::{cluster::ClusterImpl, standalone::StandaloneImpl, DbClient};
 use crate::{router::RouterImpl, rpc_client::GrpcClientBuilder, RpcConfig, RpcOptions};
 
 pub enum Mode {
@@ -11,10 +11,10 @@ pub enum Mode {
 }
 
 /// Client builder, has standalone mode and cluster mode.
-/// 
+///
 /// You should define the mode in [`new`],
 /// and it cannot be changed after.
-/// 
+///
 /// [`new`]: Builder::new
 pub struct Builder {
     mode: Mode,

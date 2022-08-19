@@ -6,12 +6,14 @@ use async_trait::async_trait;
 use dashmap::DashMap;
 use futures::future::join_all;
 
-use super::{DbClient, standalone::StandaloneImpl, QueryResult, QueryResultVec, WriteResult, WriteResultVec};
+use super::{
+    standalone::StandaloneImpl, DbClient, QueryResult, QueryResultVec, WriteResult, WriteResultVec,
+};
 use crate::{
     errors::should_refresh,
     model::{request::QueryRequest, route::Endpoint, write::WriteRequest},
     router::Router,
-    rpc_client::{RpcClientImpl, GrpcClientBuilder, RpcContext},
+    rpc_client::{GrpcClientBuilder, RpcClientImpl, RpcContext},
     Error,
 };
 
@@ -59,11 +61,11 @@ impl<R: Router> DbClient for ClusterImpl<R> {
 
     async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> WriteResultVec {
         // Get metrics' related endpoints(some may not exist).
-        let route_metrics: Vec<_> = req.write_entries.iter().map(|(m, _)| m.clone()).collect();
-        let endpoints = match self.route_client.route(&route_metrics, ctx).await {
+        let should_routes: Vec<_> = req.write_entries.iter().map(|(m, _)| m.clone()).collect();
+        let endpoints = match self.route_client.route(&should_routes, ctx).await {
             Ok(ep) => ep,
             Err(e) => {
-                return vec![WriteResult::new(route_metrics, Err(e))];
+                return vec![WriteResult::new(should_routes, Err(e))];
             }
         };
 
@@ -73,7 +75,7 @@ impl<R: Router> DbClient for ClusterImpl<R> {
         let mut partition_by_endpoint = HashMap::new();
         endpoints
             .into_iter()
-            .zip(route_metrics.into_iter())
+            .zip(should_routes.into_iter())
             .for_each(|(ep, m)| match ep {
                 Some(ep) => {
                     let write_req = partition_by_endpoint

@@ -2,9 +2,7 @@
 
 //! Write request and some useful tools for it.
 
-use std::{
-    collections::{BTreeMap, HashMap},
-};
+use std::collections::{BTreeMap, HashMap};
 
 use ceresdbproto::storage::{
     Field, FieldGroup as FieldGroupPb, Tag as TagPb, WriteEntry as WriteEntryPb,

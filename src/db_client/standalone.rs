@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Client for ceresdb of standalone mode.
-/// 
+///
 /// Now, [`StandaloneImpl`] just wraps [`RpcClient`] simply.
 pub struct StandaloneImpl<R: RpcClient> {
     pub rpc_client: R,
