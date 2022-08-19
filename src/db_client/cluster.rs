@@ -117,7 +117,7 @@ impl<R: Router> DbClient for ClusterImpl<R> {
                 .iter()
                 .filter_map(|res| {
                     if let Err(Error::Server(serv_err)) = &res.result &&
-                    should_refresh(serv_err.code) {
+                    should_refresh(serv_err.code, &serv_err.msg) {
                     Some(res.metrics.clone().into_iter())
                 } else {
                     None

@@ -53,6 +53,8 @@ pub fn is_ok(code: u32) -> bool {
 
 // TODO may change in future.
 #[inline]
-pub fn should_refresh(code: u32) -> bool {
+pub fn should_refresh(code: u32, msg: &str) -> bool {
     code == StatusCode::InvalidArgument.as_u32()
+        && msg.contains("Table")
+        && msg.contains("not found")
 }
