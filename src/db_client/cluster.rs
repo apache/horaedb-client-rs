@@ -19,7 +19,7 @@ use crate::{
 
 /// Client for ceresdb of cluster mode.
 pub struct ClusterImpl<R: Router> {
-    route_client: R,
+    router: R,
     standalone_pool: StandalonePool,
 }
 
@@ -32,7 +32,7 @@ impl<R: Router> DbClient for ClusterImpl<R> {
             )))];
         }
 
-        let endpoint = match self.route_client.route(&req.metrics, ctx).await {
+        let endpoint = match self.router.route(&req.metrics, ctx).await {
             Ok(mut eps) => {
                 if let Some(ep) = eps[0].take() {
                     ep
@@ -53,7 +53,7 @@ impl<R: Router> DbClient for ClusterImpl<R> {
                 .await
                 .result
                 .map_err(|e| {
-                    self.route_client.evict(&req.metrics);
+                    self.router.evict(&req.metrics);
                     e
                 }),
         )]
@@ -62,7 +62,7 @@ impl<R: Router> DbClient for ClusterImpl<R> {
     async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> WriteResultVec {
         // Get metrics' related endpoints(some may not exist).
         let should_routes: Vec<_> = req.write_entries.iter().map(|(m, _)| m.clone()).collect();
-        let endpoints = match self.route_client.route(&should_routes, ctx).await {
+        let endpoints = match self.router.route(&should_routes, ctx).await {
             Ok(ep) => ep,
             Err(e) => {
                 return vec![WriteResult::new(should_routes, Err(e))];
@@ -125,7 +125,7 @@ impl<R: Router> DbClient for ClusterImpl<R> {
                 })
                 .flatten()
                 .collect();
-            self.route_client.evict(&evicts);
+            self.router.evict(&evicts);
         }
 
         write_results
@@ -135,7 +135,7 @@ impl<R: Router> DbClient for ClusterImpl<R> {
 impl<R: Router> ClusterImpl<R> {
     pub fn new(route_client: R, standalone_buidler: GrpcClientBuilder) -> Self {
         Self {
-            route_client,
+            router: route_client,
             standalone_pool: StandalonePool::new(standalone_buidler),
         }
     }
