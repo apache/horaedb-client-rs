@@ -2,20 +2,23 @@
 
 mod builder;
 mod cluster;
-mod result;
 mod standalone;
 
 use async_trait::async_trait;
 pub use builder::{Builder, Mode};
-pub use result::{QueryResult, QueryResultVec, WriteResult, WriteResultVec};
 
 use crate::{
-    model::{request::QueryRequest, write::WriteRequest},
+    model::{
+        request::QueryRequest,
+        write::{WriteRequest, WriteResponse},
+        QueryResponse,
+    },
     rpc_client::RpcContext,
+    Result,
 };
 
 #[async_trait]
 pub trait DbClient {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> QueryResultVec;
-    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> WriteResultVec;
+    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse>;
+    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResponse>;
 }

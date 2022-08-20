@@ -87,11 +87,7 @@ async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 
     let write_req = write_req_builder.build();
     let res = client.write(rpc_ctx, &write_req).await;
-    println!(
-        "Metrcis:{:?}, result:{:?}",
-        res[0].metrics,
-        res[0].result.as_ref().unwrap()
-    );
+    println!("{:?}", res);
 }
 
 async fn query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
@@ -99,15 +95,14 @@ async fn query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
         metrics: vec!["ceresdb".to_string()],
         ql: "select * from ceresdb;".to_string(),
     };
-    let resps = client.query(rpc_ctx, &req).await;
-    let resp = resps.get(0).unwrap();
-    println!("Rows in the resp:{:?}", resp.result.as_ref().unwrap());
+    let resp = client.query(rpc_ctx, &req).await.unwrap();
+    println!("Rows in the resp:{:?}", resp);
 
-    for (row_id, row) in resp.result.as_ref().unwrap().rows.iter().enumerate() {
+    for (row_id, row) in resp.rows.iter().enumerate() {
         let format_row: Vec<_> = row
             .datums
             .iter()
-            .zip(resp.result.as_ref().unwrap().schema.column_schemas.iter())
+            .zip(resp.schema.column_schemas.iter())
             .map(|(datum, col_schema)| format!("{:?}:{:?}", col_schema.name, datum))
             .collect();
         println!("row{}:{:?}", row_id, format_row);

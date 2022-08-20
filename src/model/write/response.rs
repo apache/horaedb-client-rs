@@ -10,6 +10,12 @@ pub struct WriteResponse {
     pub failed: u32,
 }
 
+impl WriteResponse {
+    pub fn new(success: u32, failed: u32) -> Self {
+        Self { success, failed }
+    }
+}
+
 impl From<WriteResponsePb> for WriteResponse {
     fn from(resp_pb: WriteResponsePb) -> Self {
         WriteResponse {

@@ -6,15 +6,18 @@ use async_trait::async_trait;
 use dashmap::DashMap;
 use futures::future::join_all;
 
-use super::{
-    standalone::StandaloneImpl, DbClient, QueryResult, QueryResultVec, WriteResult, WriteResultVec,
-};
+use super::{standalone::StandaloneImpl, DbClient};
 use crate::{
-    errors::should_refresh,
-    model::{request::QueryRequest, route::Endpoint, write::WriteRequest},
+    errors::{should_refresh, ClusterWriteError},
+    model::{
+        request::QueryRequest,
+        route::Endpoint,
+        write::{WriteRequest, WriteResponse},
+        QueryResponse,
+    },
     router::Router,
     rpc_client::{RpcClientImpl, RpcClientImplBuilder, RpcContext},
-    Error,
+    Error, Result,
 };
 
 /// Client for ceresdb of cluster mode.
@@ -25,11 +28,11 @@ pub struct ClusterImpl<R: Router> {
 
 #[async_trait]
 impl<R: Router> DbClient for ClusterImpl<R> {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> QueryResultVec {
+    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse> {
         if req.metrics.is_empty() {
-            return vec![QueryResult::new(Err(Error::Unknown(
+            return Err(Error::Unknown(
                 "Metrics in query request can't be empty in cluster mode".to_string(),
-            )))];
+            ));
         }
 
         let endpoint = match self.router.route(&req.metrics, ctx).await {
@@ -37,40 +40,30 @@ impl<R: Router> DbClient for ClusterImpl<R> {
                 if let Some(ep) = eps[0].take() {
                     ep
                 } else {
-                    return vec![QueryResult::new(Err(Error::Unknown(
+                    return Err(Error::Unknown(
                         "Metric doesn't have corresponding endpoint".to_string(),
-                    )))];
+                    ));
                 }
             }
             Err(e) => {
-                return vec![QueryResult::new(Err(e))];
+                return Err(e);
             }
         };
 
         let clnt = self.standalone_pool.get_or_create(&endpoint).clone();
-        vec![QueryResult::new(
-            clnt.query_internal(ctx, req.clone())
-                .await
-                .result
-                .map_err(|e| {
-                    self.router.evict(&req.metrics);
-                    e
-                }),
-        )]
+
+        clnt.query_internal(ctx, req.clone()).await.map_err(|e| {
+            self.router.evict(&req.metrics);
+            e
+        })
     }
 
-    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> WriteResultVec {
+    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResponse> {
         // Get metrics' related endpoints(some may not exist).
         let should_routes: Vec<_> = req.write_entries.iter().map(|(m, _)| m.clone()).collect();
-        let endpoints = match self.router.route(&should_routes, ctx).await {
-            Ok(ep) => ep,
-            Err(e) => {
-                return vec![WriteResult::new(should_routes, Err(e))];
-            }
-        };
+        let endpoints = self.router.route(&should_routes, ctx).await?;
 
         // Partition write entries in request according to related endpoints.
-        let mut write_results = Vec::new();
         let mut no_corresponding_endpoints = Vec::new();
         let mut partition_by_endpoint = HashMap::new();
         endpoints
@@ -91,44 +84,59 @@ impl<R: Router> DbClient for ClusterImpl<R> {
                 }
             });
 
-        if !no_corresponding_endpoints.is_empty() {
-            write_results.push(WriteResult::new(
-                no_corresponding_endpoints,
-                Err(Error::Unknown(
-                    "Metrics don't have corresponding endpoints".to_string(),
-                )),
-            ));
-        }
-
         // Get client and send.
-        if !partition_by_endpoint.is_empty() {
-            let clnt_req_paris: Vec<_> = partition_by_endpoint
-                .into_iter()
-                .map(|(ep, req)| (self.standalone_pool.get_or_create(&ep), req))
-                .collect();
-            let mut futures = Vec::with_capacity(clnt_req_paris.len());
-            for (clnt, req) in clnt_req_paris {
-                futures.push(async move { clnt.write_internal(ctx, req).await })
-            }
-
-            // Await rpc results and evict invalid route entries.
-            let rpc_write_results = join_all(futures).await;
-            let evicts: Vec<_> = rpc_write_results
-                .iter()
-                .filter_map(|res| {
-                    if let Err(Error::Server(serv_err)) = &res.result &&
-                    should_refresh(serv_err.code, &serv_err.msg) {
-                    Some(res.metrics.clone().into_iter())
-                } else {
-                    None
-                }
-                })
-                .flatten()
-                .collect();
-            self.router.evict(&evicts);
+        let mut wirte_metrics = vec![Vec::new(); partition_by_endpoint.len()];
+        let clnt_req_paris: Vec<_> = partition_by_endpoint
+            .into_iter()
+            .enumerate()
+            .map(|(idx, (ep, req))| {
+                assert!(idx < wirte_metrics.len());
+                wirte_metrics[idx].extend(req.write_entries.iter().map(|(m, _)| m.clone()));
+                (self.standalone_pool.get_or_create(&ep), req)
+            })
+            .collect();
+        let mut futures = Vec::with_capacity(clnt_req_paris.len());
+        for (clnt, req) in clnt_req_paris {
+            futures.push(async move { clnt.write_internal(ctx, req).await })
         }
 
-        write_results
+        // Await rpc results and collect results.
+        let mut metrics_result_pairs: Vec<_> = join_all(futures)
+            .await
+            .into_iter()
+            .zip(wirte_metrics.into_iter())
+            .map(|(results, metrics)| (metrics, results))
+            .collect();
+        metrics_result_pairs.push((
+            no_corresponding_endpoints,
+            Err(Error::Unknown(
+                "Metrics don't have corresponding endpoints".to_string(),
+            )),
+        ));
+
+        // Process results:
+        //  + Evict outdated endpoints.
+        //  + Merge results and return.
+        let evicts: Vec<_> = metrics_result_pairs
+            .iter()
+            .filter_map(|(metrics, result)| {
+                if let Err(Error::Server(serv_err)) = &result &&
+                should_refresh(serv_err.code, &serv_err.msg) {
+                Some(metrics.clone())
+            } else {
+                None
+            }
+            })
+            .flatten()
+            .collect();
+        self.router.evict(&evicts);
+
+        let cluster_error: ClusterWriteError = metrics_result_pairs.into();
+        if cluster_error.all_ok() {
+            Ok(cluster_error.ok.1)
+        } else {
+            Err(Error::ClusterWriteError(cluster_error))
+        }
     }
 }
 

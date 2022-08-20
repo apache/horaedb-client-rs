@@ -2,11 +2,16 @@
 
 use async_trait::async_trait;
 
-use super::{DbClient, QueryResult, QueryResultVec, WriteResult, WriteResultVec};
+use super::DbClient;
 use crate::{
-    model::{convert, request::QueryRequest, write::WriteRequest},
+    model::{
+        convert,
+        request::QueryRequest,
+        write::{WriteRequest, WriteResponse},
+        QueryResponse,
+    },
     rpc_client::{RpcClient, RpcContext},
-    Error,
+    Error, Result,
 };
 
 /// Client for ceresdb of standalone mode.
@@ -18,12 +23,12 @@ pub struct StandaloneImpl<R: RpcClient> {
 
 #[async_trait]
 impl<R: RpcClient> DbClient for StandaloneImpl<R> {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> QueryResultVec {
-        vec![self.query_internal(ctx, req.clone()).await]
+    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse> {
+        self.query_internal(ctx, req.clone()).await
     }
 
-    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> WriteResultVec {
-        vec![self.write_internal(ctx, req.clone()).await]
+    async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResponse> {
+        self.write_internal(ctx, req.clone()).await
     }
 }
 
@@ -32,22 +37,26 @@ impl<R: RpcClient> StandaloneImpl<R> {
         Self { rpc_client }
     }
 
-    pub async fn query_internal(&self, ctx: &RpcContext, req: QueryRequest) -> QueryResult {
+    pub async fn query_internal(
+        &self,
+        ctx: &RpcContext,
+        req: QueryRequest,
+    ) -> Result<QueryResponse> {
         let result_pb = self.rpc_client.query(ctx, &req.into()).await;
-        QueryResult::new(result_pb.and_then(|resp_pb| {
+        result_pb.and_then(|resp_pb| {
             convert::parse_queried_rows(&resp_pb.schema_content, &resp_pb.rows)
                 .map_err(Error::Client)
-        }))
+        })
     }
 
-    pub async fn write_internal(&self, ctx: &RpcContext, req: WriteRequest) -> WriteResult {
-        let metrics: Vec<_> = req.write_entries.iter().map(|(m, _)| m.clone()).collect();
-        WriteResult::new(
-            metrics,
-            self.rpc_client
-                .write(ctx, &req.into())
-                .await
-                .map(|resp_pb| resp_pb.into()),
-        )
+    pub async fn write_internal(
+        &self,
+        ctx: &RpcContext,
+        req: WriteRequest,
+    ) -> Result<WriteResponse> {
+        self.rpc_client
+            .write(ctx, &req.into())
+            .await
+            .map(|resp_pb| resp_pb.into())
     }
 }
