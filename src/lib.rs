@@ -6,6 +6,7 @@ pub mod model;
 mod options;
 mod router;
 mod rpc_client;
+mod util;
 
 pub use crate::{
     errors::{Error, Result},

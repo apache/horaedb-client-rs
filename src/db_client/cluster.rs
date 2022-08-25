@@ -8,7 +8,7 @@ use futures::future::join_all;
 
 use super::{standalone::StandaloneImpl, DbClient};
 use crate::{
-    errors::{should_refresh, ClusterWriteError},
+    errors::ClusterWriteError,
     model::{
         request::QueryRequest,
         route::Endpoint,
@@ -17,6 +17,7 @@ use crate::{
     },
     router::Router,
     rpc_client::{RpcClientImpl, RpcClientImplBuilder, RpcContext},
+    util::should_refresh,
     Error, Result,
 };
 
