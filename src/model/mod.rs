@@ -3,6 +3,7 @@
 pub mod convert;
 pub mod display;
 pub mod request;
+pub mod route;
 pub mod row;
 pub mod value;
 pub mod write;

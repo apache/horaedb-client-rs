@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
-pub struct GrpcConfig {
+pub struct RpcConfig {
     /// Set the thread num as the cpu cores number if not set.
     pub thread_num: Option<usize>,
     /// -1 means unlimited
@@ -14,7 +14,7 @@ pub struct GrpcConfig {
     pub keepalive_timeout: Duration,
 }
 
-impl Default for GrpcConfig {
+impl Default for RpcConfig {
     fn default() -> Self {
         Self {
             thread_num: None,
@@ -33,6 +33,7 @@ impl Default for GrpcConfig {
 pub struct RpcOptions {
     pub write_timeout: Duration,
     pub read_timeout: Duration,
+    pub connect_timeout: Duration,
 }
 
 impl Default for RpcOptions {
@@ -40,6 +41,7 @@ impl Default for RpcOptions {
         Self {
             write_timeout: Duration::from_secs(5),
             read_timeout: Duration::from_secs(60),
+            connect_timeout: Duration::from_secs(3),
         }
     }
 }

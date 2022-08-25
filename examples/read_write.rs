@@ -1,13 +1,15 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+use std::sync::Arc;
+
 use ceresdb_client_rs::{
-    client::{Client, RpcContext},
+    db_client::{Builder, DbClient, Mode},
     model::{request::QueryRequest, value::Value, write::WriteRequestBuilder},
-    Builder, DbClient,
+    RpcConfig, RpcContext,
 };
 use chrono::Local;
 
-async fn create_table(client: &Client, rpc_ctx: &RpcContext) {
+async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let create_table_sql = r#"CREATE TABLE ceresdb (
                 str_tag string TAG,
                 int_tag int32 TAG,
@@ -21,21 +23,21 @@ async fn create_table(client: &Client, rpc_ctx: &RpcContext) {
         metrics: vec!["ceresdb".to_string()],
         ql: create_table_sql.to_string(),
     };
-    let _resp = client.query(rpc_ctx, &req).await.unwrap();
+    let _resp = client.query(rpc_ctx, &req).await;
     println!("Create table success!");
 }
 
-async fn drop_table(client: &Client, rpc_ctx: &RpcContext) {
+async fn drop_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let drop_table_sql = "DROP TABLE ceresdb";
     let req = QueryRequest {
         metrics: vec!["ceresdb".to_string()],
         ql: drop_table_sql.to_string(),
     };
-    let _resp = client.query(rpc_ctx, &req).await.unwrap();
+    let _resp = client.query(rpc_ctx, &req).await;
     println!("Drop table success!");
 }
 
-async fn write(client: &Client, rpc_ctx: &RpcContext) {
+async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let ts1 = Local::now().timestamp_millis();
     let mut write_req_builder = WriteRequestBuilder::default();
     // first row
@@ -88,7 +90,7 @@ async fn write(client: &Client, rpc_ctx: &RpcContext) {
     println!("{:?}", res);
 }
 
-async fn query(client: &Client, rpc_ctx: &RpcContext) {
+async fn query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let req = QueryRequest {
         metrics: vec!["ceresdb".to_string()],
         ql: "select * from ceresdb;".to_string(),
@@ -110,7 +112,9 @@ async fn query(client: &Client, rpc_ctx: &RpcContext) {
 #[tokio::main]
 async fn main() {
     // you should ensure ceresdb is running, and grpc port is set to 8831
-    let client = Builder::new("127.0.0.1:8831".to_string()).build();
+    let client = Builder::new("127.0.0.1:8831".to_string(), Mode::Standalone)
+        .grpc_config(RpcConfig::default())
+        .build();
     let rpc_ctx = RpcContext::new("public".to_string(), "".to_string());
 
     println!("------------------------------------------------------------------");
