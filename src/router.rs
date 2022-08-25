@@ -59,13 +59,7 @@ impl<R: RpcClient> Router for RouterImpl<R> {
                     }
 
                     None => {
-                        // There should not be duplicated metric in metrics
-                        if misses.insert(metric.clone(), idx).is_some() {
-                            return Err(Error::Unknown(format!(
-                                "Route duplicated metric:{}",
-                                metric
-                            )));
-                        }
+                        misses.insert(metric.clone(), idx);
                     }
                 }
             }
