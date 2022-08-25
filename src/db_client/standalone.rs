@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 
-use super::DbClient;
 use crate::{
+    db_client::DbClient,
     model::{
         convert,
         request::QueryRequest,

@@ -50,9 +50,9 @@ impl<R: Router> DbClient for ClusterImpl<R> {
             }
         };
 
-        let clnt = self.standalone_pool.get_or_create(&endpoint).clone();
+        let client = self.standalone_pool.get_or_create(&endpoint).clone();
 
-        clnt.query_internal(ctx, req.clone()).await.map_err(|e| {
+        client.query_internal(ctx, req.clone()).await.map_err(|e| {
             self.router.evict(&req.metrics);
             e
         })
@@ -85,26 +85,26 @@ impl<R: Router> DbClient for ClusterImpl<R> {
             });
 
         // Get client and send.
-        let mut wirte_metrics = vec![Vec::new(); partition_by_endpoint.len()];
-        let clnt_req_paris: Vec<_> = partition_by_endpoint
+        let mut write_metrics = vec![Vec::new(); partition_by_endpoint.len()];
+        let client_req_paris: Vec<_> = partition_by_endpoint
             .into_iter()
             .enumerate()
             .map(|(idx, (ep, req))| {
-                assert!(idx < wirte_metrics.len());
-                wirte_metrics[idx].extend(req.write_entries.iter().map(|(m, _)| m.clone()));
+                assert!(idx < write_metrics.len());
+                write_metrics[idx].extend(req.write_entries.iter().map(|(m, _)| m.clone()));
                 (self.standalone_pool.get_or_create(&ep), req)
             })
             .collect();
-        let mut futures = Vec::with_capacity(clnt_req_paris.len());
-        for (clnt, req) in clnt_req_paris {
-            futures.push(async move { clnt.write_internal(ctx, req).await })
+        let mut futures = Vec::with_capacity(client_req_paris.len());
+        for (client, req) in client_req_paris {
+            futures.push(async move { client.write_internal(ctx, req).await })
         }
 
         // Await rpc results and collect results.
         let mut metrics_result_pairs: Vec<_> = join_all(futures)
             .await
             .into_iter()
-            .zip(wirte_metrics.into_iter())
+            .zip(write_metrics.into_iter())
             .map(|(results, metrics)| (metrics, results))
             .collect();
         metrics_result_pairs.push((
@@ -120,8 +120,8 @@ impl<R: Router> DbClient for ClusterImpl<R> {
         let evicts: Vec<_> = metrics_result_pairs
             .iter()
             .filter_map(|(metrics, result)| {
-                if let Err(Error::Server(serv_err)) = &result &&
-                should_refresh(serv_err.code, &serv_err.msg) {
+                if let Err(Error::Server(server_error)) = &result &&
+                should_refresh(server_error.code, &server_error.msg) {
                 Some(metrics.clone())
             } else {
                 None
@@ -141,25 +141,25 @@ impl<R: Router> DbClient for ClusterImpl<R> {
 }
 
 impl<R: Router> ClusterImpl<R> {
-    pub fn new(route_client: R, standalone_buidler: RpcClientImplBuilder) -> Self {
+    pub fn new(route_client: R, standalone_builder: RpcClientImplBuilder) -> Self {
         Self {
             router: route_client,
-            standalone_pool: StandalonePool::new(standalone_buidler),
+            standalone_pool: StandalonePool::new(standalone_builder),
         }
     }
 }
 
 struct StandalonePool {
     pool: DashMap<Endpoint, Arc<StandaloneImpl<RpcClientImpl>>>,
-    standalone_buidler: RpcClientImplBuilder,
+    standalone_builder: RpcClientImplBuilder,
 }
 
 // TODO better to add gc.
 impl StandalonePool {
-    fn new(standalone_buidler: RpcClientImplBuilder) -> Self {
+    fn new(standalone_builder: RpcClientImplBuilder) -> Self {
         Self {
             pool: DashMap::new(),
-            standalone_buidler,
+            standalone_builder,
         }
     }
 
@@ -172,7 +172,7 @@ impl StandalonePool {
             self.pool
                 .entry(endpoint.clone())
                 .or_insert(Arc::new(StandaloneImpl::new(
-                    self.standalone_buidler.build(endpoint.to_string()),
+                    self.standalone_builder.build(endpoint.to_string()),
                 )))
                 .clone()
         }

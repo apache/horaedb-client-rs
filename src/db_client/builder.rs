@@ -2,11 +2,16 @@
 
 use std::sync::Arc;
 
-use super::{cluster::ClusterImpl, standalone::StandaloneImpl, DbClient};
-use crate::{router::RouterImpl, rpc_client::RpcClientImplBuilder, RpcConfig, RpcOptions};
+use crate::{
+    db_client::{cluster::ClusterImpl, standalone::StandaloneImpl, DbClient},
+    router::RouterImpl,
+    rpc_client::RpcClientImplBuilder,
+    RpcConfig, RpcOptions,
+};
 
+#[derive(Debug, Clone)]
 pub enum Mode {
-    Strandalone,
+    Standalone,
     Cluster,
 }
 
@@ -16,6 +21,7 @@ pub enum Mode {
 /// and it cannot be changed after.
 ///
 /// [`new`]: Builder::new
+#[derive(Debug, Clone)]
 pub struct Builder {
     mode: Mode,
     endpoint: String,
@@ -49,7 +55,7 @@ impl Builder {
         let rpc_client_builder = RpcClientImplBuilder::new(self.grpc_config, self.rpc_opts);
 
         match self.mode {
-            Mode::Strandalone => {
+            Mode::Standalone => {
                 Arc::new(StandaloneImpl::new(rpc_client_builder.build(self.endpoint)))
             }
 
