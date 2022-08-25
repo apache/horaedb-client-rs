@@ -109,12 +109,15 @@ impl<R: Router> DbClient for ClusterImpl<R> {
             .zip(write_metrics.into_iter())
             .map(|(results, metrics)| (metrics, results))
             .collect();
-        metrics_result_pairs.push((
-            no_corresponding_endpoints,
-            Err(Error::Unknown(
-                "Metrics don't have corresponding endpoints".to_string(),
-            )),
-        ));
+
+        if !no_corresponding_endpoints.is_empty() {
+            metrics_result_pairs.push((
+                no_corresponding_endpoints,
+                Err(Error::Unknown(
+                    "Metrics don't have corresponding endpoints".to_string(),
+                )),
+            ));
+        }
 
         // Process results:
         //  + Evict outdated endpoints.
