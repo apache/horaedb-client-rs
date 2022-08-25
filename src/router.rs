@@ -48,8 +48,7 @@ impl<R: RpcClient> Router for RouterImpl<R> {
     async fn route(&self, metrics: &[String], ctx: &RpcContext) -> Result<Vec<Option<Endpoint>>> {
         let mut target_endpoints = vec![None; metrics.len()];
 
-        // Find from cache firstly (if force_refresh is false),
-        // and collect misses.
+        // Find from cache firstly and collect misses.
         let misses = {
             let mut misses = HashMap::new();
             for (idx, metric) in metrics.iter().enumerate() {
