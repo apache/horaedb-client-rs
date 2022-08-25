@@ -24,6 +24,7 @@ use crate::{
 /// Client for ceresdb of cluster mode.
 pub struct ClusterImpl<R: Router> {
     router: R,
+    // Server connection handler pool.
     standalone_pool: StandalonePool,
 }
 
