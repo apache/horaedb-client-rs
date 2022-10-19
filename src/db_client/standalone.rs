@@ -8,7 +8,7 @@ use crate::{
         convert,
         request::QueryRequest,
         write::{WriteRequest, WriteResponse},
-        QueryResponse,
+        QueryResponse, Schema,
     },
     rpc_client::{RpcClient, RpcContext},
     Error, Result,
@@ -44,8 +44,16 @@ impl<R: RpcClient> StandaloneImpl<R> {
     ) -> Result<QueryResponse> {
         let result_pb = self.rpc_client.query(ctx, &req.into()).await;
         result_pb.and_then(|resp_pb| {
-            convert::parse_queried_rows(&resp_pb.schema_content, &resp_pb.rows)
-                .map_err(Error::Client)
+            if !resp_pb.schema_content.is_empty() {
+                convert::parse_queried_rows(&resp_pb.schema_content, &resp_pb.rows)
+                    .map_err(Error::Client)
+            } else {
+                Ok(QueryResponse {
+                    schema: Schema::default(),
+                    rows: Vec::new(),
+                    affected_rows: resp_pb.affected_rows,
+                })
+            }
         })
     }
 
