@@ -1,162 +1,140 @@
-// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
-
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use ceresdbproto::{
-    storage::{
-        QueryRequest as QueryRequestPb, QueryResponse as QueryResponsePb,
-        RouteRequest as RouteRequestPb, RouteResponse as RouteResponsePb,
-        WriteRequest as WriteRequestPb, WriteResponse as WriteResponsePb,
-    },
-    storage_grpc::StorageServiceClient,
+use ceresdbproto::storage::{
+    storage_service_client::StorageServiceClient, QueryRequest as QueryRequestPb,
+    QueryResponse as QueryResponsePb, RouteRequest as RouteRequestPb,
+    RouteResponse as RouteResponsePb, WriteRequest as WriteRequestPb,
+    WriteResponse as WriteResponsePb,
 };
-use grpcio::{CallOption, Channel, ChannelBuilder, EnvBuilder, Environment, MetadataBuilder};
+use tonic::{
+    metadata::{errors::InvalidMetadataValue, Ascii, MetadataValue},
+    service::Interceptor,
+    transport::{Channel, Endpoint},
+    Request, Status,
+};
 
 use crate::{
-    errors::{Error, Result, ServerError},
+    errors::{Error, Result},
     options::{RpcConfig, RpcOptions},
-    rpc_client::{RpcClient, RpcContext},
-    util::is_ok,
+    rpc_client::{RpcClient, RpcClientFactory, RpcContext},
 };
 
-const RPC_HEADER_TENANT_KEY: &str = "x-ceresdb-access-tenant";
-
-/// The implementation for DbClient is based on grpc protocol.
-#[derive(Clone)]
 pub struct RpcClientImpl {
-    raw_client: Arc<StorageServiceClient>,
-    rpc_opts: RpcOptions,
     channel: Channel,
+}
+
+impl RpcClientImpl {
+    fn new(channel: Channel) -> Self {
+        Self { channel }
+    }
 }
 
 #[async_trait]
 impl RpcClient for RpcClientImpl {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequestPb) -> Result<QueryResponsePb> {
-        self.check_connectivity().await?;
-
-        let call_opt = self.make_call_option(ctx)?;
-        let mut resp = self.raw_client.query_async_opt(req, call_opt)?.await?;
-
-        if !is_ok(resp.get_header().code) {
-            let header = resp.take_header();
-            return Err(Error::Server(ServerError {
-                code: header.code,
-                msg: header.error,
-            }));
-        }
-
-        if resp.schema_content.is_empty() {
-            let mut r = QueryResponsePb::default();
-            r.set_affected_rows(resp.affected_rows);
-            return Ok(r);
-        }
-
-        Ok(resp)
-    }
-
-    async fn write(&self, ctx: &RpcContext, req: &WriteRequestPb) -> Result<WriteResponsePb> {
-        self.check_connectivity().await?;
-
-        let call_opt = self.make_call_option(ctx)?;
-        let mut resp = self.raw_client.write_async_opt(req, call_opt)?.await?;
-        if !is_ok(resp.get_header().code) {
-            let header = resp.take_header();
-            return Err(Error::Server(ServerError {
-                code: header.code,
-                msg: header.error,
-            }));
-        }
-
-        Ok(resp)
-    }
-
-    async fn route(&self, ctx: &RpcContext, req: &RouteRequestPb) -> Result<RouteResponsePb> {
-        self.check_connectivity().await?;
-
-        let call_opt = self.make_call_option(ctx)?;
-        let mut resp = self.raw_client.route_async_opt(req, call_opt)?.await?;
-        if !is_ok(resp.get_header().code) {
-            let header = resp.take_header();
-            return Err(Error::Server(ServerError {
-                code: header.code,
-                msg: header.error,
-            }));
-        }
-
-        Ok(resp)
-    }
-}
-
-impl RpcClientImpl {
-    /// Make the `CallOption` for grpc request.
-    fn make_call_option(&self, ctx: &RpcContext) -> Result<CallOption> {
-        let mut builder = MetadataBuilder::with_capacity(1);
-        builder
-            .add_str(RPC_HEADER_TENANT_KEY, &ctx.tenant)
-            .map_err(|e| Error::Client(format!("invalid tenant:{}, err:{}", ctx.tenant, e)))?;
-        let headers = builder.build();
-
-        Ok(CallOption::default()
-            .timeout(self.rpc_opts.read_timeout)
-            .headers(headers))
-    }
-
-    async fn check_connectivity(&self) -> Result<()> {
-        if !self
-            .channel
-            .wait_for_connected(self.rpc_opts.connect_timeout)
+    async fn query(&self, ctx: &RpcContext, req: QueryRequestPb) -> Result<QueryResponsePb> {
+        let interceptor =
+            AuthInterceptor::new(ctx).map_err(|_e| Error::AuthFailInvalid(ctx.clone()))?;
+        let mut client =
+            StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
+        let response = client
+            .query(Request::new(req))
             .await
-        {
-            return Err(Error::Connect(
-                "Connection broken and try for reconnecting failed".to_string(),
-            ));
-        }
+            .map_err(|status: Status| Error::Rpc(status))?;
+        Ok(response.into_inner())
+    }
 
-        Ok(())
+    async fn write(&self, ctx: &RpcContext, req: WriteRequestPb) -> Result<WriteResponsePb> {
+        let interceptor =
+            AuthInterceptor::new(ctx).map_err(|_e| Error::AuthFailInvalid(ctx.clone()))?;
+        let mut client =
+            StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
+        let response = client
+            .write(Request::new(req))
+            .await
+            .map_err(|status: Status| Error::Rpc(status))?;
+        Ok(response.into_inner())
+    }
+
+    async fn route(&self, ctx: &RpcContext, req: RouteRequestPb) -> Result<RouteResponsePb> {
+        let interceptor =
+            AuthInterceptor::new(ctx).map_err(|_e| Error::AuthFailInvalid(ctx.clone()))?;
+        let mut client =
+            StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
+        let response = client
+            .route(Request::new(req))
+            .await
+            .map_err(|status: Status| Error::Rpc(status))?;
+        Ok(response.into_inner())
     }
 }
 
-/// Builder for building an [`Client`].
-#[derive(Clone)]
-pub struct RpcClientImplBuilder {
+const RPC_HEADER_TENANT_KEY: &str = "x-ceresdb-access-tenant";
+
+pub struct AuthInterceptor {
+    tenant: MetadataValue<Ascii>,
+    _token: MetadataValue<Ascii>,
+}
+
+impl AuthInterceptor {
+    fn new(ctx: &RpcContext) -> std::result::Result<Self, InvalidMetadataValue> {
+        let tenant: MetadataValue<_> = ctx.tenant.parse()?;
+        let _token: MetadataValue<_> = ctx.token.parse()?;
+        Ok(AuthInterceptor {tenant, _token })
+    }
+}
+
+impl<'a> Interceptor for AuthInterceptor {
+    fn call(
+        &mut self,
+        mut request: tonic::Request<()>,
+    ) -> std::result::Result<tonic::Request<()>, Status> {
+        request
+            .metadata_mut()
+            .insert(RPC_HEADER_TENANT_KEY, self.tenant.clone());
+        Ok(request)
+    }
+}
+
+pub struct RpcClientImplFactory {
     rpc_opts: RpcOptions,
     grpc_config: RpcConfig,
-    env: Arc<Environment>,
 }
 
-#[allow(clippy::return_self_not_must_use)]
-impl RpcClientImplBuilder {
+impl RpcClientImplFactory {
     pub fn new(grpc_config: RpcConfig, rpc_opts: RpcOptions) -> Self {
-        let env = {
-            let mut env_builder = EnvBuilder::new();
-            if let Some(thread_num) = grpc_config.thread_num {
-                env_builder = env_builder.cq_count(thread_num);
-            }
-
-            Arc::new(env_builder.build())
-        };
-
         Self {
             rpc_opts,
             grpc_config,
-            env,
         }
     }
+}
 
-    pub fn build(&self, endpoint: String) -> RpcClientImpl {
-        let channel = ChannelBuilder::new(self.env.clone())
-            .max_send_message_len(self.grpc_config.max_send_msg_len)
-            .max_receive_message_len(self.grpc_config.max_recv_msg_len)
-            .keepalive_time(self.grpc_config.keepalive_time)
-            .keepalive_timeout(self.grpc_config.keepalive_timeout)
-            .connect(&endpoint);
-        let channel_clone = channel.clone();
-        let raw_client = Arc::new(StorageServiceClient::new(channel));
-        RpcClientImpl {
-            raw_client,
-            rpc_opts: self.rpc_opts.clone(),
-            channel: channel_clone,
-        }
+#[async_trait]
+impl RpcClientFactory for RpcClientImplFactory {
+    async fn build(&self, endpoint: String) -> Result<Arc<dyn RpcClient>> {
+        let configured_endpoint =
+            Endpoint::from_shared(endpoint.clone()).map_err(|e| Error::Connect {
+                addr: endpoint.clone(),
+                source: Box::new(e),
+            })?;
+        let configured_endpoint = match self.grpc_config.keep_alive_while_idle {
+            true => configured_endpoint
+                .connect_timeout(self.rpc_opts.connect_timeout)
+                .keep_alive_timeout(self.grpc_config.keepalive_timeout)
+                .keep_alive_while_idle(true)
+                .http2_keep_alive_interval(self.grpc_config.keepalive_interval),
+            false => configured_endpoint
+                .connect_timeout(self.rpc_opts.connect_timeout)
+                .keep_alive_while_idle(false),
+        };
+        let chan = configured_endpoint
+            .connect()
+            .await
+            .map_err(|e| Error::Connect {
+                addr: endpoint,
+                source: Box::new(e),
+            })?;
+        Ok(Arc::new(RpcClientImpl::new(chan)))
     }
 }

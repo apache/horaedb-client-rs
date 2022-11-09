@@ -5,8 +5,9 @@ use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
 use dashmap::DashMap;
 use futures::future::join_all;
+use tokio::sync::OnceCell;
 
-use super::{standalone::StandaloneImpl, DbClient};
+use super::{DbClient, direct::DirectInnerClient};
 use crate::{
     errors::ClusterWriteError,
     model::{
@@ -15,29 +16,48 @@ use crate::{
         write::{WriteRequest, WriteResponse},
         QueryResponse,
     },
-    router::Router,
-    rpc_client::{RpcClientImpl, RpcClientImplBuilder, RpcContext},
+    router::{Router, RouterImpl},
+    rpc_client::{RpcClientFactory, RpcContext},
     util::should_refresh,
     Error, Result,
 };
 
 /// Client for ceresdb of cluster mode.
-pub struct ClusterImpl<R: Router> {
-    router: R,
-    // Server connection handler pool.
-    standalone_pool: StandalonePool,
+pub struct ClusterImpl<F: RpcClientFactory> {
+    factory: Arc<F>,
+    router_endpoint: String,
+    router: OnceCell<Box<dyn Router>>,
+    standalone_pool: DirectClientPool<F>,
+}
+
+impl<F: RpcClientFactory> ClusterImpl<F> {
+    pub fn new(factory: Arc<F>, router_endpoint: String) -> Self {
+        Self {
+            factory: factory.clone(),
+            router_endpoint,
+            router: OnceCell::new(),
+            standalone_pool: DirectClientPool::new(factory),
+        }
+    }
+
+    #[inline]
+    async fn init_router(&self) -> Result<Box<dyn Router>> {
+        let router_client = self.factory.build(self.router_endpoint.clone()).await?;
+        Ok(Box::new(RouterImpl::new(router_client)))
+    }
 }
 
 #[async_trait]
-impl<R: Router> DbClient for ClusterImpl<R> {
+impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
     async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse> {
         if req.metrics.is_empty() {
             return Err(Error::Unknown(
                 "Metrics in query request can't be empty in cluster mode".to_string(),
             ));
         }
+        let router_handle = self.router.get_or_try_init(|| self.init_router()).await?;
 
-        let endpoint = match self.router.route(&req.metrics, ctx).await {
+        let endpoint = match router_handle.route(&req.metrics, ctx).await {
             Ok(mut eps) => {
                 if let Some(ep) = eps[0].take() {
                     ep
@@ -54,8 +74,8 @@ impl<R: Router> DbClient for ClusterImpl<R> {
 
         let client = self.standalone_pool.get_or_create(&endpoint).clone();
 
-        client.query_internal(ctx, req.clone()).await.map_err(|e| {
-            self.router.evict(&req.metrics);
+        client.query_internal(ctx, req).await.map_err(|e| {
+            router_handle.evict(&req.metrics);
             e
         })
     }
@@ -63,7 +83,8 @@ impl<R: Router> DbClient for ClusterImpl<R> {
     async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResponse> {
         // Get metrics' related endpoints(some may not exist).
         let should_routes: Vec<_> = req.write_entries.iter().map(|(m, _)| m.clone()).collect();
-        let endpoints = self.router.route(&should_routes, ctx).await?;
+        let router_handle = self.router.get_or_try_init(|| self.init_router()).await?;
+        let endpoints = router_handle.route(&should_routes, ctx).await?;
 
         // Partition write entries in request according to related endpoints.
         let mut no_corresponding_endpoints = Vec::new();
@@ -99,7 +120,7 @@ impl<R: Router> DbClient for ClusterImpl<R> {
             .collect();
         let mut futures = Vec::with_capacity(client_req_paris.len());
         for (client, req) in client_req_paris {
-            futures.push(async move { client.write_internal(ctx, req).await })
+            futures.push(async move { client.write_internal(ctx, &req).await })
         }
 
         // Await rpc results and collect results.
@@ -134,7 +155,7 @@ impl<R: Router> DbClient for ClusterImpl<R> {
             })
             .flatten()
             .collect();
-        self.router.evict(&evicts);
+        router_handle.evict(&evicts);
 
         let cluster_error: ClusterWriteError = metrics_result_pairs.into();
         if cluster_error.all_ok() {
@@ -145,30 +166,20 @@ impl<R: Router> DbClient for ClusterImpl<R> {
     }
 }
 
-impl<R: Router> ClusterImpl<R> {
-    pub fn new(route_client: R, standalone_builder: RpcClientImplBuilder) -> Self {
-        Self {
-            router: route_client,
-            standalone_pool: StandalonePool::new(standalone_builder),
-        }
-    }
+struct DirectClientPool<F: RpcClientFactory> {
+    pool: DashMap<Endpoint, Arc<DirectInnerClient<F>>>,
+    factory: Arc<F>,
 }
 
-struct StandalonePool {
-    pool: DashMap<Endpoint, Arc<StandaloneImpl<RpcClientImpl>>>,
-    standalone_builder: RpcClientImplBuilder,
-}
-
-// TODO better to add gc.
-impl StandalonePool {
-    fn new(standalone_builder: RpcClientImplBuilder) -> Self {
+impl<F: RpcClientFactory> DirectClientPool<F> {
+    fn new(factory: Arc<F>) -> Self {
         Self {
             pool: DashMap::new(),
-            standalone_builder,
+            factory,
         }
     }
 
-    fn get_or_create(&self, endpoint: &Endpoint) -> Arc<StandaloneImpl<RpcClientImpl>> {
+    fn get_or_create(&self, endpoint: &Endpoint) -> Arc<DirectInnerClient<F>> {
         if let Some(c) = self.pool.get(endpoint) {
             // If exist in cache, return.
             c.value().clone()
@@ -176,8 +187,9 @@ impl StandalonePool {
             // If not exist, build --> insert --> return.
             self.pool
                 .entry(endpoint.clone())
-                .or_insert(Arc::new(StandaloneImpl::new(
-                    self.standalone_builder.build(endpoint.to_string()),
+                .or_insert(Arc::new(DirectInnerClient::new(
+                    self.factory.clone(),
+                    endpoint.to_string(),
                 )))
                 .clone()
         }

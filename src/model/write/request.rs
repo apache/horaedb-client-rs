@@ -224,7 +224,7 @@ impl From<WriteRequest> for WriteRequestPb {
         for (metric, entries) in req.write_entries {
             write_metrics_pb.push(convert_one_write_metric(metric, entries));
         }
-        req_pb.set_metrics(write_metrics_pb.into());
+        req_pb.metrics = write_metrics_pb.into();
 
         req_pb
     }
@@ -240,10 +240,10 @@ fn convert_one_write_metric(metric: String, entries: Vec<WriteEntry>) -> WriteMe
         wirte_entries_pb.push(convert_entry(&mut tags_dict, &mut fields_dict, entry));
     }
 
-    write_metric_pb.set_metric(metric);
-    write_metric_pb.set_tag_names(tags_dict.convert_ordered().into());
-    write_metric_pb.set_field_names(fields_dict.convert_ordered().into());
-    write_metric_pb.set_entries(wirte_entries_pb.into());
+    write_metric_pb.metric = metric;
+    write_metric_pb.tag_names = tags_dict.convert_ordered().into();
+    write_metric_pb.field_names = fields_dict.convert_ordered().into();
+    write_metric_pb.entries = wirte_entries_pb.into();
 
     write_metric_pb
 }
@@ -254,8 +254,8 @@ fn convert_entry(
     entry: WriteEntry,
 ) -> WriteEntryPb {
     let mut entry_pb = WriteEntryPb::default();
-    entry_pb.set_tags(convert_tags(tags_dict, entry.series.tags).into());
-    entry_pb.set_field_groups(convert_ts_fields(fields_dict, entry.ts_fields).into());
+    entry_pb.tags = convert_tags(tags_dict, entry.series.tags).into();
+    entry_pb.field_groups = convert_ts_fields(fields_dict, entry.ts_fields).into();
 
     entry_pb
 }
@@ -268,8 +268,8 @@ fn convert_tags(tags_dict: &mut NameDict, tags: BTreeMap<String, Value>) -> Vec<
     let mut tag_pbs = Vec::with_capacity(tags.len());
     for (name, val) in tags {
         let mut tag_pb = TagPb::default();
-        tag_pb.set_name_index(tags_dict.insert(name));
-        tag_pb.set_value(val.into());
+        tag_pb.name_index = tags_dict.insert(name);
+        tag_pb.value = Some(val.into());
         tag_pbs.push(tag_pb);
     }
 
@@ -288,16 +288,16 @@ fn convert_ts_fields(
     for (ts, fields) in ts_fields {
         // ts + fields will be converted to field group in pb
         let mut field_group_pb = FieldGroupPb::default();
-        field_group_pb.set_timestamp(ts);
+        field_group_pb.timestamp = ts;
 
         let mut field_pbs = Vec::with_capacity(fields.len());
         for (name, val) in fields {
             let mut field_pb = Field::default();
-            field_pb.set_name_index(fields_dict.insert(name));
-            field_pb.set_value(val.into());
+            field_pb.name_index = fields_dict.insert(name);
+            field_pb.value = Some(val.into());
             field_pbs.push(field_pb);
         }
-        field_group_pb.set_fields(field_pbs.into());
+        field_group_pb.fields = field_pbs.into();
 
         // collect field group
         field_group_pbs.push(field_group_pb);
@@ -503,9 +503,9 @@ mod test {
         let tag_names = tags_dict.convert_ordered();
 
         for tag_pb in tags_pb {
-            let name_idx = tag_pb.get_name_index() as usize;
+            let name_idx = tag_pb.name_index as usize;
             let value_in_map: ValuePb = test_tags.get(&tag_names[name_idx]).unwrap().clone().into();
-            assert_eq!(value_in_map, *tag_pb.get_value());
+            assert_eq!(value_in_map, tag_pb.value.unwrap());
         }
     }
 
@@ -557,12 +557,12 @@ mod test {
         let field_names = fields_dict.convert_ordered();
 
         for f_group in field_groups_pb {
-            let fields_map = test_ts_fields.get(&f_group.get_timestamp()).unwrap();
+            let fields_map = test_ts_fields.get(&f_group.timestamp).unwrap();
             for field_pb in f_group.fields {
-                let key_in_map = field_names[field_pb.get_name_index() as usize].as_str();
+                let key_in_map = field_names[field_pb.name_index as usize].as_str();
                 let val_in_map: ValuePb = fields_map.get(key_in_map).unwrap().clone().into();
 
-                assert_eq!(val_in_map, *field_pb.get_value());
+                assert_eq!(val_in_map, field_pb.value.unwrap());
             }
         }
     }

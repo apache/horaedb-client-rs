@@ -3,6 +3,7 @@
 mod builder;
 mod cluster;
 mod standalone;
+mod direct;
 
 use async_trait::async_trait;
 pub use builder::{Builder, Mode};

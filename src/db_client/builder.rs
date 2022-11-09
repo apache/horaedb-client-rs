@@ -1,11 +1,10 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-use std::sync::Arc;
+use std::{sync::Arc};
 
 use crate::{
     db_client::{cluster::ClusterImpl, standalone::StandaloneImpl, DbClient},
-    router::RouterImpl,
-    rpc_client::RpcClientImplBuilder,
+    rpc_client::{RpcClientImplFactory},
     RpcConfig, RpcOptions,
 };
 
@@ -52,16 +51,15 @@ impl Builder {
     }
 
     pub fn build(self) -> Arc<dyn DbClient> {
-        let rpc_client_builder = RpcClientImplBuilder::new(self.grpc_config, self.rpc_opts);
+        let rpc_client_factory = Arc::new(RpcClientImplFactory::new(self.grpc_config, self.rpc_opts));
 
         match self.mode {
             Mode::Standalone => {
-                Arc::new(StandaloneImpl::new(rpc_client_builder.build(self.endpoint)))
+                Arc::new(StandaloneImpl::new(rpc_client_factory, self.endpoint))
             }
 
             Mode::Cluster => {
-                let router = RouterImpl::new(rpc_client_builder.build(self.endpoint));
-                Arc::new(ClusterImpl::new(router, rpc_client_builder))
+                Arc::new(ClusterImpl::new(rpc_client_factory,self.endpoint))
             }
         }
     }

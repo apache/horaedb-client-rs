@@ -2,7 +2,7 @@
 
 //! 'Value' used in local.
 
-use ceresdbproto::storage::Value as ValuePb;
+use ceresdbproto::storage::{Value as ValuePb, value};
 
 pub type TimestampMs = i64;
 
@@ -49,20 +49,20 @@ impl From<Value> for ValuePb {
     fn from(val: Value) -> Self {
         let mut val_pb = ValuePb::default();
         match val {
-            Value::Timestamp(v) => val_pb.set_timestamp_value(v),
-            Value::Double(v) => val_pb.set_float64_value(v),
-            Value::Float(v) => val_pb.set_float32_value(v),
-            Value::Varbinary(v) => val_pb.set_varbinary_value(v),
-            Value::String(v) => val_pb.set_string_value(v),
-            Value::UInt64(v) => val_pb.set_uint64_value(v),
-            Value::UInt32(v) => val_pb.set_uint32_value(v),
-            Value::UInt16(v) => val_pb.set_uint16_value(v as u32),
-            Value::UInt8(v) => val_pb.set_uint8_value(v as u32),
-            Value::Int64(v) => val_pb.set_int64_value(v),
-            Value::Int32(v) => val_pb.set_int32_value(v),
-            Value::Int16(v) => val_pb.set_int16_value(v as i32),
-            Value::Int8(v) => val_pb.set_int8_value(v as i32),
-            Value::Boolean(v) => val_pb.set_bool_value(v),
+            Value::Timestamp(v) => val_pb.value = Some(value::Value::TimestampValue(v)),
+            Value::Double(v) => val_pb.value = Some(value::Value::Float64Value(v)),
+            Value::Float(v) => val_pb.value = Some(value::Value::Float32Value(v)),
+            Value::Varbinary(v) => val_pb.value = Some(value::Value::VarbinaryValue(v)),
+            Value::String(v) => val_pb.value = Some(value::Value::StringValue(v)),
+            Value::UInt64(v) => val_pb.value = Some(value::Value::Uint64Value(v)),
+            Value::UInt32(v) => val_pb.value = Some(value::Value::Uint32Value(v)),
+            Value::UInt16(v) => val_pb.value = Some(value::Value::Uint16Value(v.into())),
+            Value::UInt8(v) => val_pb.value = Some(value::Value::Uint8Value(v.into())),
+            Value::Int64(v) => val_pb.value = Some(value::Value::Int64Value(v)),
+            Value::Int32(v) => val_pb.value = Some(value::Value::Int32Value(v)),
+            Value::Int16(v) => val_pb.value = Some(value::Value::Int16Value(v.into())),
+            Value::Int8(v) => val_pb.value = Some(value::Value::Int8Value(v.into())),
+            Value::Boolean(v) => val_pb.value = Some(value::Value::BoolValue(v)),
         };
 
         val_pb

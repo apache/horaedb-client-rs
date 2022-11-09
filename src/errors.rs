@@ -1,6 +1,6 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-use crate::model::write::WriteResponse;
+use crate::{model::write::WriteResponse, RpcContext};
 
 #[derive(Debug)]
 pub enum Error {
@@ -9,15 +9,20 @@ pub enum Error {
     /// Error from the rpc.
     /// Note that any error caused by a running server wont be wrapped in the
     /// grpc errors.
-    Rpc(grpcio::Error),
+    Rpc(tonic::Status),
     /// Error about rpc.
     /// It will be throw while connection between client and server is broken
     /// and try for reconnecting is failed(timeout).
-    Connect(String),
+    Connect {
+        addr: String,
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
     /// Error from the client and basically the rpc request has not been called
     /// yet or the rpc request has already been finished successfully.
     Client(String),
-    ///
+    /// Error about rpc contex, invalid format
+    AuthFailInvalid(RpcContext),
+    /// 
     ClusterWriteError(ClusterWriteError),
     /// Error unknown
     Unknown(String),
@@ -68,9 +73,3 @@ pub struct ServerError {
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
-
-impl From<grpcio::Error> for Error {
-    fn from(grpc_err: grpcio::Error) -> Self {
-        Error::Rpc(grpc_err)
-    }
-}
