@@ -22,7 +22,7 @@ pub enum Error {
     Client(String),
     /// Error about rpc contex, invalid format
     AuthFailInvalid(RpcContext),
-    /// 
+    ///
     ClusterWriteError(ClusterWriteError),
     /// Error unknown
     Unknown(String),

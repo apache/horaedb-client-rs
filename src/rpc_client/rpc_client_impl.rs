@@ -80,7 +80,7 @@ impl AuthInterceptor {
     fn new(ctx: &RpcContext) -> std::result::Result<Self, InvalidMetadataValue> {
         let tenant: MetadataValue<_> = ctx.tenant.parse()?;
         let _token: MetadataValue<_> = ctx.token.parse()?;
-        Ok(AuthInterceptor {tenant, _token })
+        Ok(AuthInterceptor { tenant, _token })
     }
 }
 

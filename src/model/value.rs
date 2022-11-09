@@ -2,7 +2,7 @@
 
 //! 'Value' used in local.
 
-use ceresdbproto::storage::{Value as ValuePb, value};
+use ceresdbproto::storage::{value, Value as ValuePb};
 
 pub type TimestampMs = i64;
 

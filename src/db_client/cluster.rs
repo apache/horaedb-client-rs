@@ -7,7 +7,7 @@ use dashmap::DashMap;
 use futures::future::join_all;
 use tokio::sync::OnceCell;
 
-use super::{DbClient, direct::DirectInnerClient};
+use super::{direct::DirectInnerClient, DbClient};
 use crate::{
     errors::ClusterWriteError,
     model::{
