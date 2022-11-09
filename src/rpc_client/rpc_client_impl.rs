@@ -40,7 +40,7 @@ impl RpcClient for RpcClientImpl {
         let response = client
             .query(Request::new(req))
             .await
-            .map_err(|status: Status| Error::Rpc(status))?;
+            .map_err(Error::Rpc)?;
         Ok(response.into_inner())
     }
 
@@ -52,7 +52,7 @@ impl RpcClient for RpcClientImpl {
         let response = client
             .write(Request::new(req))
             .await
-            .map_err(|status: Status| Error::Rpc(status))?;
+            .map_err(Error::Rpc)?;
         Ok(response.into_inner())
     }
 
@@ -64,7 +64,7 @@ impl RpcClient for RpcClientImpl {
         let response = client
             .route(Request::new(req))
             .await
-            .map_err(|status: Status| Error::Rpc(status))?;
+            .map_err(Error::Rpc)?;
         Ok(response.into_inner())
     }
 }
@@ -84,7 +84,7 @@ impl AuthInterceptor {
     }
 }
 
-impl<'a> Interceptor for AuthInterceptor {
+impl Interceptor for AuthInterceptor {
     fn call(
         &mut self,
         mut request: tonic::Request<()>,
