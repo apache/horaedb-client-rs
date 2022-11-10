@@ -12,7 +12,7 @@ use ceresdbproto::storage::{
     WriteRequest as WriteRequestPb, WriteResponse as WriteResponsePb,
 };
 pub use mock_rpc_client::MockRpcClient;
-pub use rpc_client_impl::{RpcClientImpl, RpcClientImplFactory};
+pub use rpc_client_impl::RpcClientImplFactory;
 
 use crate::errors::Result;
 

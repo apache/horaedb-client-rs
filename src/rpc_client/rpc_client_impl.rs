@@ -20,7 +20,7 @@ use crate::{
     rpc_client::{RpcClient, RpcClientFactory, RpcContext},
 };
 
-pub struct RpcClientImpl {
+struct RpcClientImpl {
     channel: Channel,
 }
 
@@ -37,10 +37,7 @@ impl RpcClient for RpcClientImpl {
             AuthInterceptor::new(ctx).map_err(|_e| Error::AuthFailInvalid(ctx.clone()))?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
-        let response = client
-            .query(Request::new(req))
-            .await
-            .map_err(Error::Rpc)?;
+        let response = client.query(Request::new(req)).await.map_err(Error::Rpc)?;
         Ok(response.into_inner())
     }
 
@@ -49,10 +46,7 @@ impl RpcClient for RpcClientImpl {
             AuthInterceptor::new(ctx).map_err(|_e| Error::AuthFailInvalid(ctx.clone()))?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
-        let response = client
-            .write(Request::new(req))
-            .await
-            .map_err(Error::Rpc)?;
+        let response = client.write(Request::new(req)).await.map_err(Error::Rpc)?;
         Ok(response.into_inner())
     }
 
@@ -61,16 +55,15 @@ impl RpcClient for RpcClientImpl {
             AuthInterceptor::new(ctx).map_err(|_e| Error::AuthFailInvalid(ctx.clone()))?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
-        let response = client
-            .route(Request::new(req))
-            .await
-            .map_err(Error::Rpc)?;
+        let response = client.route(Request::new(req)).await.map_err(Error::Rpc)?;
         Ok(response.into_inner())
     }
 }
 
 const RPC_HEADER_TENANT_KEY: &str = "x-ceresdb-access-tenant";
 
+/// AuthInterceptor is implemented as an interceptor for tonic.
+/// Its duty is to check user authentication.
 pub struct AuthInterceptor {
     tenant: MetadataValue<Ascii>,
     _token: MetadataValue<Ascii>,

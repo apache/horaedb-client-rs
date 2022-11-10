@@ -22,7 +22,7 @@ use crate::{
     Error, Result,
 };
 
-/// Client for ceresdb of cluster mode.
+/// Client implementation for ceresdb while using cluster mode.
 pub struct ClusterImpl<F: RpcClientFactory> {
     factory: Arc<F>,
     router_endpoint: String,
@@ -166,6 +166,7 @@ impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
     }
 }
 
+/// DirectClientPool is the pool actually holding connections to data nodes.
 struct DirectClientPool<F: RpcClientFactory> {
     pool: DashMap<Endpoint, Arc<DirectInnerClient<F>>>,
     factory: Arc<F>,
