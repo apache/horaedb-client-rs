@@ -2,6 +2,7 @@
 
 mod builder;
 mod cluster;
+mod inner;
 mod standalone;
 
 use async_trait::async_trait;

@@ -6,19 +6,30 @@ use crate::model::write::WriteResponse;
 pub enum Error {
     /// Error from the running server.
     Server(ServerError),
+
     /// Error from the rpc.
     /// Note that any error caused by a running server wont be wrapped in the
     /// grpc errors.
-    Rpc(grpcio::Error),
+    Rpc(tonic::Status),
+
     /// Error about rpc.
     /// It will be throw while connection between client and server is broken
     /// and try for reconnecting is failed(timeout).
-    Connect(String),
+    Connect {
+        addr: String,
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+
     /// Error from the client and basically the rpc request has not been called
     /// yet or the rpc request has already been finished successfully.
     Client(String),
+
+    /// Error about authentication
+    AuthFail(AuthFailStatus),
+
     ///
     ClusterWriteError(ClusterWriteError),
+
     /// Error unknown
     Unknown(String),
 }
@@ -67,10 +78,19 @@ pub struct ServerError {
     pub msg: String,
 }
 
-pub type Result<T> = std::result::Result<T, Error>;
-
-impl From<grpcio::Error> for Error {
-    fn from(grpc_err: grpcio::Error) -> Self {
-        Error::Rpc(grpc_err)
-    }
+#[derive(Debug, Clone)]
+pub struct AuthFailStatus {
+    pub code: AuthCode,
+    pub msg: String,
 }
+
+#[derive(Debug, Clone)]
+pub enum AuthCode {
+    Ok = 0,
+
+    InvalidTenantMeta = 1,
+
+    InvalidTokenMeta = 2,
+}
+
+pub type Result<T> = std::result::Result<T, Error>;

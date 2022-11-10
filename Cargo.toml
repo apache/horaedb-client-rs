@@ -6,14 +6,15 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.57"
-grpcio = "0.9.1"
 avro-rs = "0.13.0"
 dashmap = "5.3.4"
 futures = "0.3"
+tonic = "0.8.1"
+tokio = "1.15"
 
 [dependencies.ceresdbproto]
 git = "https://github.com/CeresDB/ceresdbproto.git"
-rev = "2c10152d021cd5a26b9c870cdede6a0317adca3d"
+rev = "29cb0c6fba76401fd9a4ae5b8cacc9002ad78650"
 
 [dependencies.common_types]
 git = "https://github.com/CeresDB/ceresdb.git"

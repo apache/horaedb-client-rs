@@ -1,6 +1,6 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 use ceresdbproto::storage::RouteRequest;
@@ -29,13 +29,13 @@ pub trait Router: Send + Sync {
 ///
 /// [`route`]: RouterImpl::route
 /// [`evict`]: RouterImpl::evict
-pub struct RouterImpl<R: RpcClient> {
+pub struct RouterImpl {
     cache: DashMap<String, Endpoint>,
-    rpc_client: R,
+    rpc_client: Arc<dyn RpcClient>,
 }
 
-impl<R: RpcClient> RouterImpl<R> {
-    pub fn new(rpc_client: R) -> Self {
+impl RouterImpl {
+    pub fn new(rpc_client: Arc<dyn RpcClient>) -> Self {
         Self {
             cache: DashMap::new(),
             rpc_client,
@@ -44,7 +44,7 @@ impl<R: RpcClient> RouterImpl<R> {
 }
 
 #[async_trait]
-impl<R: RpcClient> Router for RouterImpl<R> {
+impl Router for RouterImpl {
     async fn route(&self, metrics: &[String], ctx: &RpcContext) -> Result<Vec<Option<Endpoint>>> {
         let mut target_endpoints = vec![None; metrics.len()];
 
@@ -68,8 +68,8 @@ impl<R: RpcClient> Router for RouterImpl<R> {
         // Get endpoints of misses from remote.
         let mut req = RouteRequest::default();
         let miss_metrics = misses.iter().map(|(m, _)| m.clone()).collect();
-        req.set_metrics(miss_metrics);
-        let resp = self.rpc_client.route(ctx, &req).await?;
+        req.metrics = miss_metrics;
+        let resp = self.rpc_client.route(ctx, req).await?;
 
         // Fill miss endpoint and update cache.
         for route in resp.routes {
@@ -135,7 +135,7 @@ mod test {
         // route --> change route_table --> route again.
         let ctx = RpcContext::new("test".to_string(), "".to_string());
         let metrics = vec![metric1.clone(), metric2.clone()];
-        let route_client = RouterImpl::new(mock_rpc_client);
+        let route_client = RouterImpl::new(Arc::new(mock_rpc_client));
         let route_res1 = route_client.route(&metrics, &ctx).await.unwrap();
         assert_eq!(&endpoint1, route_res1.get(0).unwrap().as_ref().unwrap());
         assert_eq!(&endpoint2, route_res1.get(1).unwrap().as_ref().unwrap());
