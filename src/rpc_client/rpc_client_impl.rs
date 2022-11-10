@@ -8,14 +8,14 @@ use ceresdbproto::storage::{
     WriteResponse as WriteResponsePb,
 };
 use tonic::{
-    metadata::{errors::InvalidMetadataValue, Ascii, MetadataValue},
+    metadata::{Ascii, MetadataValue},
     service::Interceptor,
     transport::{Channel, Endpoint},
     Request, Status,
 };
 
 use crate::{
-    errors::{Error, Result},
+    errors::{AuthCode, AuthFailStatus, Error, Result},
     options::{RpcConfig, RpcOptions},
     rpc_client::{RpcClient, RpcClientFactory, RpcContext},
 };
@@ -33,8 +33,7 @@ impl RpcClientImpl {
 #[async_trait]
 impl RpcClient for RpcClientImpl {
     async fn query(&self, ctx: &RpcContext, req: QueryRequestPb) -> Result<QueryResponsePb> {
-        let interceptor =
-            AuthInterceptor::new(ctx).map_err(|_e| Error::AuthFailInvalid(ctx.clone()))?;
+        let interceptor = AuthInterceptor::new(ctx)?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
         let response = client.query(Request::new(req)).await.map_err(Error::Rpc)?;
@@ -42,8 +41,7 @@ impl RpcClient for RpcClientImpl {
     }
 
     async fn write(&self, ctx: &RpcContext, req: WriteRequestPb) -> Result<WriteResponsePb> {
-        let interceptor =
-            AuthInterceptor::new(ctx).map_err(|_e| Error::AuthFailInvalid(ctx.clone()))?;
+        let interceptor = AuthInterceptor::new(ctx)?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
         let response = client.write(Request::new(req)).await.map_err(Error::Rpc)?;
@@ -51,8 +49,7 @@ impl RpcClient for RpcClientImpl {
     }
 
     async fn route(&self, ctx: &RpcContext, req: RouteRequestPb) -> Result<RouteResponsePb> {
-        let interceptor =
-            AuthInterceptor::new(ctx).map_err(|_e| Error::AuthFailInvalid(ctx.clone()))?;
+        let interceptor = AuthInterceptor::new(ctx)?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
         let response = client.route(Request::new(req)).await.map_err(Error::Rpc)?;
@@ -70,10 +67,26 @@ pub struct AuthInterceptor {
 }
 
 impl AuthInterceptor {
-    fn new(ctx: &RpcContext) -> std::result::Result<Self, InvalidMetadataValue> {
+    fn new(ctx: &RpcContext) -> std::result::Result<Self, Error> {
         Ok(AuthInterceptor {
-            tenant: ctx.tenant.parse()?,
-            _token: ctx.token.parse()?,
+            tenant: ctx.tenant.parse().map_err(|_e| {
+                Error::AuthFail(AuthFailStatus {
+                    code: AuthCode::InvalidTenantMeta,
+                    msg: format!(
+                        "invalid tenant: {}, can not be converted to grpc metadata",
+                        ctx.tenant
+                    ),
+                })
+            })?,
+            _token: ctx.token.parse().map_err(|_e| {
+                Error::AuthFail(AuthFailStatus {
+                    code: AuthCode::InvalidTokenMeta,
+                    msg: format!(
+                        "invalid token: {}, can not be converted to grpc metadata",
+                        ctx.token
+                    ),
+                })
+            })?,
         })
     }
 }
