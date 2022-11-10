@@ -224,7 +224,7 @@ impl From<WriteRequest> for WriteRequestPb {
         for (metric, entries) in req.write_entries {
             write_metrics_pb.push(convert_one_write_metric(metric, entries));
         }
-        req_pb.metrics = write_metrics_pb.into();
+        req_pb.metrics = write_metrics_pb;
 
         req_pb
     }
@@ -241,9 +241,9 @@ fn convert_one_write_metric(metric: String, entries: Vec<WriteEntry>) -> WriteMe
     }
 
     write_metric_pb.metric = metric;
-    write_metric_pb.tag_names = tags_dict.convert_ordered().into();
-    write_metric_pb.field_names = fields_dict.convert_ordered().into();
-    write_metric_pb.entries = wirte_entries_pb.into();
+    write_metric_pb.tag_names = tags_dict.convert_ordered();
+    write_metric_pb.field_names = fields_dict.convert_ordered();
+    write_metric_pb.entries = wirte_entries_pb;
 
     write_metric_pb
 }
@@ -253,11 +253,10 @@ fn convert_entry(
     fields_dict: &mut NameDict,
     entry: WriteEntry,
 ) -> WriteEntryPb {
-    let mut entry_pb = WriteEntryPb::default();
-    entry_pb.tags = convert_tags(tags_dict, entry.series.tags).into();
-    entry_pb.field_groups = convert_ts_fields(fields_dict, entry.ts_fields).into();
-
-    entry_pb
+    WriteEntryPb {
+        tags: convert_tags(tags_dict, entry.series.tags),
+        field_groups: convert_ts_fields(fields_dict, entry.ts_fields),
+    }
 }
 
 fn convert_tags(tags_dict: &mut NameDict, tags: BTreeMap<String, Value>) -> Vec<TagPb> {
@@ -267,9 +266,10 @@ fn convert_tags(tags_dict: &mut NameDict, tags: BTreeMap<String, Value>) -> Vec<
 
     let mut tag_pbs = Vec::with_capacity(tags.len());
     for (name, val) in tags {
-        let mut tag_pb = TagPb::default();
-        tag_pb.name_index = tags_dict.insert(name);
-        tag_pb.value = Some(val.into());
+        let tag_pb = TagPb {
+            name_index: tags_dict.insert(name),
+            value: Some(val.into()),
+        };
         tag_pbs.push(tag_pb);
     }
 
@@ -287,17 +287,18 @@ fn convert_ts_fields(
     let mut field_group_pbs = Vec::with_capacity(ts_fields.len());
     for (ts, fields) in ts_fields {
         // ts + fields will be converted to field group in pb
-        let mut field_group_pb = FieldGroupPb::default();
-        field_group_pb.timestamp = ts;
-
         let mut field_pbs = Vec::with_capacity(fields.len());
         for (name, val) in fields {
-            let mut field_pb = Field::default();
-            field_pb.name_index = fields_dict.insert(name);
-            field_pb.value = Some(val.into());
+            let field_pb = Field {
+                name_index: fields_dict.insert(name),
+                value: Some(val.into()),
+            };
             field_pbs.push(field_pb);
         }
-        field_group_pb.fields = field_pbs.into();
+        let field_group_pb = FieldGroupPb {
+            timestamp: ts,
+            fields: field_pbs,
+        };
 
         // collect field group
         field_group_pbs.push(field_group_pb);

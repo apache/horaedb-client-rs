@@ -7,7 +7,7 @@ use dashmap::DashMap;
 use futures::future::join_all;
 use tokio::sync::OnceCell;
 
-use super::{direct::DirectInnerClient, DbClient};
+use super::{inner::InnerClient, DbClient};
 use crate::{
     errors::ClusterWriteError,
     model::{
@@ -168,7 +168,7 @@ impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
 
 /// DirectClientPool is the pool actually holding connections to data nodes.
 struct DirectClientPool<F: RpcClientFactory> {
-    pool: DashMap<Endpoint, Arc<DirectInnerClient<F>>>,
+    pool: DashMap<Endpoint, Arc<InnerClient<F>>>,
     factory: Arc<F>,
 }
 
@@ -180,7 +180,7 @@ impl<F: RpcClientFactory> DirectClientPool<F> {
         }
     }
 
-    fn get_or_create(&self, endpoint: &Endpoint) -> Arc<DirectInnerClient<F>> {
+    fn get_or_create(&self, endpoint: &Endpoint) -> Arc<InnerClient<F>> {
         if let Some(c) = self.pool.get(endpoint) {
             // If exist in cache, return.
             c.value().clone()
@@ -188,7 +188,7 @@ impl<F: RpcClientFactory> DirectClientPool<F> {
             // If not exist, build --> insert --> return.
             self.pool
                 .entry(endpoint.clone())
-                .or_insert(Arc::new(DirectInnerClient::new(
+                .or_insert(Arc::new(InnerClient::new(
                     self.factory.clone(),
                     endpoint.to_string(),
                 )))

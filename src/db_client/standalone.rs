@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use super::direct::DirectInnerClient;
+use super::inner::InnerClient;
 use crate::{
     db_client::DbClient,
     model::{
@@ -18,15 +18,15 @@ use crate::{
 
 /// Client for ceresdb of standalone mode.
 ///
-/// Now, [`StandaloneImpl`] just wraps [`RpcClient`] simply.
+/// Now, [`StandaloneImpl`] just wraps [`InnerClient`] simply.
 pub struct StandaloneImpl<F: RpcClientFactory> {
-    inner_client: DirectInnerClient<F>,
+    inner_client: InnerClient<F>,
 }
 
 impl<F: RpcClientFactory> StandaloneImpl<F> {
     pub fn new(factory: Arc<F>, endpoint: String) -> Self {
         Self {
-            inner_client: DirectInnerClient::new(factory, endpoint),
+            inner_client: InnerClient::new(factory, endpoint),
         }
     }
 }

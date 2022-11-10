@@ -121,13 +121,13 @@ impl RpcClientFactory for RpcClientImplFactory {
                 .connect_timeout(self.rpc_opts.connect_timeout)
                 .keep_alive_while_idle(false),
         };
-        let chan = configured_endpoint
+        let channel = configured_endpoint
             .connect()
             .await
             .map_err(|e| Error::Connect {
                 addr: endpoint,
                 source: Box::new(e),
             })?;
-        Ok(Arc::new(RpcClientImpl::new(chan)))
+        Ok(Arc::new(RpcClientImpl::new(channel)))
     }
 }

@@ -17,16 +17,16 @@ use crate::{
 
 /// Inner client for both standalone and cluster modes.
 ///
-/// Now, [`DirectInnerClient`] just wraps [`RpcClient`] simply.
-pub(crate) struct DirectInnerClient<F: RpcClientFactory> {
+/// Now, [`InnerClient`] just wraps [`RpcClient`] simply.
+pub(crate) struct InnerClient<F: RpcClientFactory> {
     factory: Arc<F>,
     endpoint: String,
     inner_client: OnceCell<Arc<dyn RpcClient>>,
 }
 
-impl<F: RpcClientFactory> DirectInnerClient<F> {
+impl<F: RpcClientFactory> InnerClient<F> {
     pub fn new(factory: Arc<F>, endpoint: String) -> Self {
-        DirectInnerClient {
+        InnerClient {
             factory,
             endpoint,
             inner_client: OnceCell::new(),
