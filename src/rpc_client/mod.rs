@@ -38,7 +38,9 @@ pub trait RpcClient: Send + Sync {
 
 #[async_trait]
 pub trait RpcClientFactory: Send + Sync {
-    // The Build method may fail because of invalid endpoint, so it returns a
-    // Result. Any caller calls this method should handle the potencial error
+    /// Build `RpcClient`.
+    ///
+    /// It may fail because of invalid endpoint. Any caller calls this method
+    /// should handle the potencial error.
     async fn build(&self, endpoint: String) -> Result<Arc<dyn RpcClient>>;
 }

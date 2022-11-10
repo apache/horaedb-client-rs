@@ -231,8 +231,6 @@ impl From<WriteRequest> for WriteRequestPb {
 }
 
 fn convert_one_write_metric(metric: String, entries: Vec<WriteEntry>) -> WriteMetricPb {
-    let mut write_metric_pb = WriteMetricPb::default();
-
     let mut tags_dict = NameDict::new();
     let mut fields_dict = NameDict::new();
     let mut wirte_entries_pb = Vec::with_capacity(entries.len());
@@ -244,10 +242,8 @@ fn convert_one_write_metric(metric: String, entries: Vec<WriteEntry>) -> WriteMe
         metric,
         tag_names: tags_dict.convert_ordered(),
         field_names: fields_dict.convert_ordered(),
-        entries: write_entries_pb,
+        entries: wirte_entries_pb,
     }
-
-    write_metric_pb
 }
 
 fn convert_entry(

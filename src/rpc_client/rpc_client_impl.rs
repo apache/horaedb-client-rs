@@ -71,9 +71,9 @@ pub struct AuthInterceptor {
 
 impl AuthInterceptor {
     fn new(ctx: &RpcContext) -> std::result::Result<Self, InvalidMetadataValue> {
-        Ok(AuthInterceptor { 
+        Ok(AuthInterceptor {
             tenant: ctx.tenant.parse()?,
-            _token: ctx.token.parse()?
+            _token: ctx.token.parse()?,
         })
     }
 }
