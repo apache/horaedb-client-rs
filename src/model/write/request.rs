@@ -240,10 +240,12 @@ fn convert_one_write_metric(metric: String, entries: Vec<WriteEntry>) -> WriteMe
         wirte_entries_pb.push(convert_entry(&mut tags_dict, &mut fields_dict, entry));
     }
 
-    write_metric_pb.metric = metric;
-    write_metric_pb.tag_names = tags_dict.convert_ordered();
-    write_metric_pb.field_names = fields_dict.convert_ordered();
-    write_metric_pb.entries = wirte_entries_pb;
+    WriteMetricPb {
+        metric,
+        tag_names: tags_dict.convert_ordered(),
+        field_names: fields_dict.convert_ordered(),
+        entries: write_entries_pb,
+    }
 
     write_metric_pb
 }
