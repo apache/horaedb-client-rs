@@ -1,6 +1,6 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-use crate::{model::write::WriteResponse, RpcContext};
+use crate::{model::write::WriteResponse};
 
 #[derive(Debug)]
 pub enum Error {
