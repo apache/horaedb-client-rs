@@ -23,8 +23,11 @@ async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
         metrics: vec!["ceresdb".to_string()],
         ql: create_table_sql.to_string(),
     };
-    let _resp = client.query(rpc_ctx, &req).await;
-    println!("Create table success!");
+    let resp = client
+        .query(rpc_ctx, &req)
+        .await
+        .expect("Should succeed to create table");
+    println!("Create table result:{:?}", resp);
 }
 
 async fn drop_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {

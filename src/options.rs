@@ -11,9 +11,9 @@ pub struct RpcConfig {
     /// -1 means unlimited
     pub max_recv_msg_len: i32,
     // an interval for htt2 ping frames
-    pub keepalive_interval: Duration,
-    // timeout for http2 ping frame acknowledement
-    pub keepalive_timeout: Duration,
+    pub keep_alive_interval: Duration,
+    // timeout for http2 ping frame acknowledgement
+    pub keep_alive_timeout: Duration,
     // enables http2_keep_alive or not
     pub keep_alive_while_idle: bool,
 }
@@ -27,10 +27,10 @@ impl Default for RpcConfig {
             // 1GB
             max_recv_msg_len: 1 << 30,
             // Sets an interval for HTTP2 Ping frames should be sent to keep a connection alive
-            keepalive_interval: Duration::from_secs(60 * 10),
+            keep_alive_interval: Duration::from_secs(60 * 10),
             // A timeout for receiving an acknowledgement of the keep-alive ping
             // If the ping is not acknowledged within the timeout, the connection will be closed
-            keepalive_timeout: Duration::from_secs(3),
+            keep_alive_timeout: Duration::from_secs(3),
             // default keep http2 connections alive while idle
             keep_alive_while_idle: true,
         }

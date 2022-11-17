@@ -115,22 +115,30 @@ impl RpcClientImplFactory {
             grpc_config,
         }
     }
+
+    #[inline]
+    fn make_endpoint_with_scheme(endpoint: &str) -> String {
+        format!("http://{}", endpoint)
+    }
 }
 
 #[async_trait]
 impl RpcClientFactory for RpcClientImplFactory {
+    /// The endpoint should be in the form: `{ip_addr}:{port}`.
     async fn build(&self, endpoint: String) -> Result<Arc<dyn RpcClient>> {
+        let endpoint_with_scheme = Self::make_endpoint_with_scheme(&endpoint);
         let configured_endpoint =
-            Endpoint::from_shared(endpoint.clone()).map_err(|e| Error::Connect {
+            Endpoint::from_shared(endpoint_with_scheme).map_err(|e| Error::Connect {
                 addr: endpoint.clone(),
                 source: Box::new(e),
             })?;
+
         let configured_endpoint = match self.grpc_config.keep_alive_while_idle {
             true => configured_endpoint
                 .connect_timeout(self.rpc_opts.connect_timeout)
-                .keep_alive_timeout(self.grpc_config.keepalive_timeout)
+                .keep_alive_timeout(self.grpc_config.keep_alive_timeout)
                 .keep_alive_while_idle(true)
-                .http2_keep_alive_interval(self.grpc_config.keepalive_interval),
+                .http2_keep_alive_interval(self.grpc_config.keep_alive_interval),
             false => configured_endpoint
                 .connect_timeout(self.rpc_opts.connect_timeout)
                 .keep_alive_while_idle(false),
