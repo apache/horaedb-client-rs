@@ -14,7 +14,7 @@ tokio = "1.15"
 
 [dependencies.ceresdbproto]
 git = "https://github.com/CeresDB/ceresdbproto.git"
-rev = "8cd021e19e44e4bfba0c6f66fc59857c07d0737d"
+rev = "12024e7f5c18cca7e40461f51b275c824dd37851"
 
 [dependencies.common_types]
 git = "https://github.com/CeresDB/ceresdb.git"
