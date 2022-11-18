@@ -15,9 +15,10 @@ use tonic::{
 };
 
 use crate::{
-    errors::{AuthCode, AuthFailStatus, Error, Result},
+    errors::{AuthCode, AuthFailStatus, Error, Result, ServerError},
     options::{RpcConfig, RpcOptions},
     rpc_client::{RpcClient, RpcClientFactory, RpcContext},
+    util::is_ok,
 };
 
 struct RpcClientImpl {
@@ -36,8 +37,25 @@ impl RpcClient for RpcClientImpl {
         let interceptor = AuthInterceptor::new(ctx)?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
-        let response = client.query(Request::new(req)).await.map_err(Error::Rpc)?;
-        Ok(response.into_inner())
+        let resp = client.query(Request::new(req)).await.map_err(Error::Rpc)?;
+        let mut resp = resp.into_inner();
+
+        if let Some(header) = resp.header.take() {
+            if !is_ok(header.code) {
+                return Err(Error::Server(ServerError {
+                    code: header.code,
+                    msg: header.error,
+                }));
+            }
+        }
+
+        if resp.schema_content.is_empty() {
+            let mut r = QueryResponsePb::default();
+            r.affected_rows = resp.affected_rows;
+            return Ok(r);
+        }
+
+        Ok(resp)
     }
 
     async fn write(&self, ctx: &RpcContext, req: WriteRequestPb) -> Result<WriteResponsePb> {
