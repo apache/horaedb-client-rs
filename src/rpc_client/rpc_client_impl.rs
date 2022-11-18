@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use ceresdbproto::{
@@ -26,11 +26,21 @@ use crate::{
 
 struct RpcClientImpl {
     channel: Channel,
+    default_read_timeout: Duration,
+    default_write_timeout: Duration,
 }
 
 impl RpcClientImpl {
-    fn new(channel: Channel) -> Self {
-        Self { channel }
+    fn new(
+        channel: Channel,
+        default_read_timeout: Duration,
+        default_write_timeout: Duration,
+    ) -> Self {
+        Self {
+            channel,
+            default_read_timeout,
+            default_write_timeout,
+        }
     }
 
     fn check_status(header: ResponseHeader) -> Result<()> {
@@ -43,6 +53,21 @@ impl RpcClientImpl {
 
         Ok(())
     }
+
+    fn make_request<T>(ctx: &RpcContext, req: T, default_timeout: Duration) -> Request<T> {
+        let timeout = ctx.timeout.unwrap_or(default_timeout);
+        let mut req = Request::new(req);
+        req.set_timeout(timeout);
+        req
+    }
+
+    fn make_query_request<T>(&self, ctx: &RpcContext, req: T) -> Request<T> {
+        Self::make_request(ctx, req, self.default_read_timeout)
+    }
+
+    fn make_write_request<T>(&self, ctx: &RpcContext, req: T) -> Request<T> {
+        Self::make_request(ctx, req, self.default_write_timeout)
+    }
 }
 
 #[async_trait]
@@ -51,7 +76,11 @@ impl RpcClient for RpcClientImpl {
         let interceptor = AuthInterceptor::new(ctx)?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
-        let resp = client.query(Request::new(req)).await.map_err(Error::Rpc)?;
+
+        let resp = client
+            .query(self.make_query_request(ctx, req))
+            .await
+            .map_err(Error::Rpc)?;
         let mut resp = resp.into_inner();
 
         if let Some(header) = resp.header.take() {
@@ -65,7 +94,11 @@ impl RpcClient for RpcClientImpl {
         let interceptor = AuthInterceptor::new(ctx)?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
-        let resp = client.write(Request::new(req)).await.map_err(Error::Rpc)?;
+
+        let resp = client
+            .write(self.make_write_request(ctx, req))
+            .await
+            .map_err(Error::Rpc)?;
         let mut resp = resp.into_inner();
 
         if let Some(header) = resp.header.take() {
@@ -79,7 +112,10 @@ impl RpcClient for RpcClientImpl {
         let interceptor = AuthInterceptor::new(ctx)?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
-        let resp = client.route(Request::new(req)).await.map_err(Error::Rpc)?;
+
+        // use the write timeout for the route request.
+        let route_req = Self::make_request(ctx, req, self.default_write_timeout);
+        let resp = client.route(route_req).await.map_err(Error::Rpc)?;
         let mut resp = resp.into_inner();
 
         if let Some(header) = resp.header.take() {
@@ -183,6 +219,10 @@ impl RpcClientFactory for RpcClientImplFactory {
                 addr: endpoint,
                 source: Box::new(e),
             })?;
-        Ok(Arc::new(RpcClientImpl::new(channel)))
+        Ok(Arc::new(RpcClientImpl::new(
+            channel,
+            self.rpc_opts.read_timeout,
+            self.rpc_opts.write_timeout,
+        )))
     }
 }
