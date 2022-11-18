@@ -2,7 +2,13 @@
 
 use std::collections::HashMap;
 
-use crate::model::Datum;
+use avro_rs::Schema as AvroSchema;
+use ceresdbproto::storage::QueryResponse as QueryResponsePb;
+
+use crate::{
+    model::{convert, Datum},
+    Error,
+};
 
 #[derive(Clone, Debug)]
 pub struct Row {
@@ -149,5 +155,34 @@ impl QueryResponse {
 
     pub fn has_schema(&self) -> bool {
         !self.schema.column_schemas.is_empty()
+    }
+}
+
+impl TryFrom<QueryResponsePb> for QueryResponse {
+    type Error = Error;
+
+    fn try_from(pb_resp: QueryResponsePb) -> Result<Self, Self::Error> {
+        if pb_resp.schema_content.is_empty() {
+            return Ok(QueryResponse {
+                schema: Schema::default(),
+                rows: Vec::new(),
+                affected_rows: pb_resp.affected_rows,
+            });
+        }
+
+        let raw_schema = &pb_resp.schema_content;
+        let avro_schema =
+            AvroSchema::parse_str(raw_schema).map_err(|e| Error::Unknown(e.to_string()))?;
+        let schema = Schema::try_from(&avro_schema).map_err(|e| Error::Unknown(e.to_string()))?;
+
+        let mut resp = QueryResponse::with_capacity(schema, pb_resp.rows.len());
+        for raw_row in &pb_resp.rows {
+            let mut row = Row::with_column_num(resp.schema.num_cols());
+            convert::parse_one_row(&avro_schema, raw_row, &mut row)
+                .map_err(|e| Error::Unknown(e.to_string()))?;
+            resp.rows.push(row);
+        }
+
+        Ok(resp)
     }
 }
