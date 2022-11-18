@@ -173,13 +173,12 @@ impl TryFrom<QueryResponsePb> for QueryResponse {
         let raw_schema = &pb_resp.schema_content;
         let avro_schema =
             AvroSchema::parse_str(raw_schema).map_err(|e| Error::Unknown(e.to_string()))?;
-        let schema = Schema::try_from(&avro_schema).map_err(|e| Error::Unknown(e.to_string()))?;
+        let schema = Schema::try_from(&avro_schema).map_err(Error::Unknown)?;
 
         let mut resp = QueryResponse::with_capacity(schema, pb_resp.rows.len());
         for raw_row in &pb_resp.rows {
             let mut row = Row::with_column_num(resp.schema.num_cols());
-            convert::parse_one_row(&avro_schema, raw_row, &mut row)
-                .map_err(|e| Error::Unknown(e.to_string()))?;
+            convert::parse_one_row(&avro_schema, raw_row, &mut row).map_err(Error::Unknown)?;
             resp.rows.push(row);
         }
 
