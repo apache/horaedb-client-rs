@@ -49,12 +49,6 @@ impl RpcClient for RpcClientImpl {
             }
         }
 
-        if resp.schema_content.is_empty() {
-            let mut r = QueryResponsePb::default();
-            r.affected_rows = resp.affected_rows;
-            return Ok(r);
-        }
-
         Ok(resp)
     }
 
