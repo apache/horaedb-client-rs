@@ -18,7 +18,7 @@ rev = "12024e7f5c18cca7e40461f51b275c824dd37851"
 
 [dependencies.common_types]
 git = "https://github.com/CeresDB/ceresdb.git"
-rev = "6f62662a8732968fdc0ffcb01c7fb25447a02fcb"
+rev = "813992230dc4fb89d314aae4a0ed0cf5f648a6e1"
 default-features = false
 
 [dev-dependencies]

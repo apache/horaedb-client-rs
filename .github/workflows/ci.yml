@@ -79,7 +79,7 @@ jobs:
       - name: Setup Build Environment
         run: |
           apt update
-          apt install --yes gcc g++ libssl-dev pkg-config cmake protobuf-compiler
+          apt install --yes gcc g++ libssl-dev pkg-config cmake
           rm -rf /var/lib/apt/lists/*
       - name: Install Clippy
         run: |
@@ -122,7 +122,7 @@ jobs:
       - name: Setup Build Environment
         run: |
           apt update
-          apt install --yes gcc g++ libssl-dev pkg-config cmake protobuf-compiler
+          apt install --yes gcc g++ libssl-dev pkg-config cmake
           rm -rf /var/lib/apt/lists/*
       - name: Run Test
         run: |

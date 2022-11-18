@@ -90,7 +90,7 @@ dependencies = [
 [[package]]
 name = "arrow_ext"
 version = "0.4.0"
-source = "git+https://github.com/CeresDB/ceresdb.git?rev=6f62662a8732968fdc0ffcb01c7fb25447a02fcb#6f62662a8732968fdc0ffcb01c7fb25447a02fcb"
+source = "git+https://github.com/CeresDB/ceresdb.git?rev=813992230dc4fb89d314aae4a0ed0cf5f648a6e1#813992230dc4fb89d314aae4a0ed0cf5f648a6e1"
 dependencies = [
  "arrow",
  "uncover",
@@ -261,7 +261,7 @@ checksum = "ec8a7b6a70fde80372154c65702f00a0f56f3e1c36abbc6c440484be248856db"
 [[package]]
 name = "bytes_ext"
 version = "0.4.0"
-source = "git+https://github.com/CeresDB/ceresdb.git?rev=6f62662a8732968fdc0ffcb01c7fb25447a02fcb#6f62662a8732968fdc0ffcb01c7fb25447a02fcb"
+source = "git+https://github.com/CeresDB/ceresdb.git?rev=813992230dc4fb89d314aae4a0ed0cf5f648a6e1#813992230dc4fb89d314aae4a0ed0cf5f648a6e1"
 dependencies = [
  "bytes",
  "snafu",
@@ -344,7 +344,7 @@ dependencies = [
 [[package]]
 name = "common_types"
 version = "0.4.0"
-source = "git+https://github.com/CeresDB/ceresdb.git?rev=6f62662a8732968fdc0ffcb01c7fb25447a02fcb#6f62662a8732968fdc0ffcb01c7fb25447a02fcb"
+source = "git+https://github.com/CeresDB/ceresdb.git?rev=813992230dc4fb89d314aae4a0ed0cf5f648a6e1#813992230dc4fb89d314aae4a0ed0cf5f648a6e1"
 dependencies = [
  "arrow_ext",
  "byteorder",
@@ -1354,9 +1354,10 @@ dependencies = [
 [[package]]
 name = "proto"
 version = "0.4.0"
-source = "git+https://github.com/CeresDB/ceresdb.git?rev=6f62662a8732968fdc0ffcb01c7fb25447a02fcb#6f62662a8732968fdc0ffcb01c7fb25447a02fcb"
+source = "git+https://github.com/CeresDB/ceresdb.git?rev=813992230dc4fb89d314aae4a0ed0cf5f648a6e1#813992230dc4fb89d314aae4a0ed0cf5f648a6e1"
 dependencies = [
  "prost",
+ "protoc-bin-vendored",
  "tonic-build",
 ]
 
