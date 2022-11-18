@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use ceresdbproto::storage::{
-    storage_service_client::StorageServiceClient, QueryRequest as QueryRequestPb,
-    QueryResponse as QueryResponsePb, RouteRequest as RouteRequestPb,
-    RouteResponse as RouteResponsePb, WriteRequest as WriteRequestPb,
-    WriteResponse as WriteResponsePb,
+use ceresdbproto::{
+    common::ResponseHeader,
+    storage::{
+        storage_service_client::StorageServiceClient, QueryRequest as QueryRequestPb,
+        QueryResponse as QueryResponsePb, RouteRequest as RouteRequestPb,
+        RouteResponse as RouteResponsePb, WriteRequest as WriteRequestPb,
+        WriteResponse as WriteResponsePb,
+    },
 };
 use tonic::{
     metadata::{Ascii, MetadataValue},
@@ -15,9 +18,10 @@ use tonic::{
 };
 
 use crate::{
-    errors::{AuthCode, AuthFailStatus, Error, Result},
+    errors::{AuthCode, AuthFailStatus, Error, Result, ServerError},
     options::{RpcConfig, RpcOptions},
     rpc_client::{RpcClient, RpcClientFactory, RpcContext},
+    util::is_ok,
 };
 
 struct RpcClientImpl {
@@ -28,6 +32,17 @@ impl RpcClientImpl {
     fn new(channel: Channel) -> Self {
         Self { channel }
     }
+
+    fn check_status(header: ResponseHeader) -> Result<()> {
+        if !is_ok(header.code) {
+            return Err(Error::Server(ServerError {
+                code: header.code,
+                msg: header.error,
+            }));
+        }
+
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -36,24 +51,42 @@ impl RpcClient for RpcClientImpl {
         let interceptor = AuthInterceptor::new(ctx)?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
-        let response = client.query(Request::new(req)).await.map_err(Error::Rpc)?;
-        Ok(response.into_inner())
+        let resp = client.query(Request::new(req)).await.map_err(Error::Rpc)?;
+        let mut resp = resp.into_inner();
+
+        if let Some(header) = resp.header.take() {
+            Self::check_status(header)?;
+        }
+
+        Ok(resp)
     }
 
     async fn write(&self, ctx: &RpcContext, req: WriteRequestPb) -> Result<WriteResponsePb> {
         let interceptor = AuthInterceptor::new(ctx)?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
-        let response = client.write(Request::new(req)).await.map_err(Error::Rpc)?;
-        Ok(response.into_inner())
+        let resp = client.write(Request::new(req)).await.map_err(Error::Rpc)?;
+        let mut resp = resp.into_inner();
+
+        if let Some(header) = resp.header.take() {
+            Self::check_status(header)?;
+        }
+
+        Ok(resp)
     }
 
     async fn route(&self, ctx: &RpcContext, req: RouteRequestPb) -> Result<RouteResponsePb> {
         let interceptor = AuthInterceptor::new(ctx)?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
-        let response = client.route(Request::new(req)).await.map_err(Error::Rpc)?;
-        Ok(response.into_inner())
+        let resp = client.route(Request::new(req)).await.map_err(Error::Rpc)?;
+        let mut resp = resp.into_inner();
+
+        if let Some(header) = resp.header.take() {
+            Self::check_status(header)?;
+        }
+
+        Ok(resp)
     }
 }
 

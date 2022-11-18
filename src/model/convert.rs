@@ -2,10 +2,7 @@
 
 use avro_rs::{types::Value, Schema as AvroSchema};
 
-use crate::model::{
-    row::{QueryResponse, Row, Schema},
-    Bytes, Datum, StringBytes, Timestamp,
-};
+use crate::model::{row::Row, Bytes, Datum, StringBytes, Timestamp};
 
 /// Convert the avro `Value` into the `Datum`.
 ///
@@ -42,7 +39,11 @@ fn value_to_datum(value: Value) -> Result<Datum, String> {
     Ok(datum)
 }
 
-fn parse_one_row(schema: &AvroSchema, mut raw: &[u8], row: &mut Row) -> Result<(), String> {
+pub(crate) fn parse_one_row(
+    schema: &AvroSchema,
+    mut raw: &[u8],
+    row: &mut Row,
+) -> Result<(), String> {
     let record = avro_rs::from_avro_datum(schema, &mut raw, None).map_err(|e| e.to_string())?;
     if let Value::Record(cols) = record {
         for (_, column_value) in cols {
@@ -54,20 +55,4 @@ fn parse_one_row(schema: &AvroSchema, mut raw: &[u8], row: &mut Row) -> Result<(
     } else {
         Err(format!("invalid avro row:{:?}, expect record", record))
     }
-}
-
-/// Parse the raw rows according to the schema and the (de)serialization
-/// protocol is avro.
-pub fn parse_queried_rows(raw_schema: &str, rows: &[Vec<u8>]) -> Result<QueryResponse, String> {
-    let avro_schema = AvroSchema::parse_str(raw_schema).map_err(|e| e.to_string())?;
-    let schema = Schema::try_from(&avro_schema)?;
-
-    let mut queried_rows = QueryResponse::with_capacity(schema, rows.len());
-    for raw_row in rows {
-        let mut row = Row::with_column_num(queried_rows.schema.num_cols());
-        parse_one_row(&avro_schema, raw_row, &mut row)?;
-        queried_rows.rows.push(row);
-    }
-
-    Ok(queried_rows)
 }

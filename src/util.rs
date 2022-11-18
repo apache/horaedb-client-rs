@@ -16,7 +16,6 @@ impl StatusCode {
 }
 
 #[inline]
-#[allow(dead_code)]
 pub fn is_ok(code: u32) -> bool {
     code == StatusCode::Ok.as_u32()
 }
