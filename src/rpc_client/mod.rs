@@ -3,7 +3,7 @@
 mod mock_rpc_client;
 mod rpc_client_impl;
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use ceresdbproto::storage::{
@@ -21,11 +21,25 @@ use crate::errors::Result;
 pub struct RpcContext {
     pub tenant: String,
     pub token: String,
+    pub timeout: Option<Duration>,
 }
 
 impl RpcContext {
     pub fn new(tenant: String, token: String) -> Self {
-        Self { tenant, token }
+        Self {
+            tenant,
+            token,
+            timeout: None,
+        }
+    }
+
+    /// Build [RpcContext] with timeout.
+    pub fn with_timeout(tenant: String, token: String, timeout: Duration) -> Self {
+        Self {
+            tenant,
+            token,
+            timeout: Some(timeout),
+        }
     }
 }
 
@@ -41,6 +55,6 @@ pub trait RpcClientFactory: Send + Sync {
     /// Build `RpcClient`.
     ///
     /// It may fail because of invalid endpoint. Any caller calls this method
-    /// should handle the potencial error.
+    /// should handle the potential error.
     async fn build(&self, endpoint: String) -> Result<Arc<dyn RpcClient>>;
 }
