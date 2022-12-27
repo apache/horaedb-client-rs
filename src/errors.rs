@@ -33,11 +33,11 @@ pub enum Error {
     Client(String),
 
     /// Error about authentication
-    #[error("faild to check auth, err:{0}")]
+    #[error("failed to check auth, err:{0}")]
     AuthFail(AuthFailStatus),
 
     /// Error from write in cluster mode, some of rows may be written
-    /// successfully, and others may have failed.
+    /// successfully, and others may fail.
     #[error("failed in cluster write, err:{0}")]
     ClusterWriteError(ClusterWriteError),
 
