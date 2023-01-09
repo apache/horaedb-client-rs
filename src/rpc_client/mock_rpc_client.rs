@@ -36,16 +36,19 @@ impl RpcClient for MockRpcClient {
         let routes: Vec<_> = req
             .metrics
             .iter()
-            .map(|m| {
-                let endpoint = route_tables.get(m.as_str()).unwrap().value().clone();
+            .filter_map(|m| {
+                let endpoint = match route_tables.get(m.as_str()) {
+                    Some(v) => v.value().clone(),
+                    None => return None,
+                };
                 let mut route_pb = RoutePb::default();
                 let endpoint_pb = EndpointPb {
-                    ip: endpoint.ip,
+                    ip: endpoint.addr,
                     port: endpoint.port,
                 };
                 route_pb.metric = m.clone();
                 route_pb.endpoint = Some(endpoint_pb);
-                route_pb
+                Some(route_pb)
             })
             .collect();
         let route_resp = RouteResponsePb {
