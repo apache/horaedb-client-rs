@@ -40,7 +40,6 @@ impl<F: RpcClientFactory> ClusterImpl<F> {
         }
     }
 
-    #[inline]
     async fn init_router(&self) -> Result<Box<dyn Router>> {
         let router_client = self.factory.build(self.router_endpoint.clone()).await?;
         let default_endpoint: Endpoint = self.router_endpoint.parse().map_err(|e| {
