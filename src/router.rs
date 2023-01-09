@@ -30,13 +30,15 @@ pub trait Router: Send + Sync {
 /// [`route`]: RouterImpl::route
 /// [`evict`]: RouterImpl::evict
 pub struct RouterImpl {
+    default_endpoint: Endpoint,
     cache: DashMap<String, Endpoint>,
     rpc_client: Arc<dyn RpcClient>,
 }
 
 impl RouterImpl {
-    pub fn new(rpc_client: Arc<dyn RpcClient>) -> Self {
+    pub fn new(default_endpoint: Endpoint, rpc_client: Arc<dyn RpcClient>) -> Self {
         Self {
+            default_endpoint,
             cache: DashMap::new(),
             rpc_client,
         }
@@ -46,7 +48,7 @@ impl RouterImpl {
 #[async_trait]
 impl Router for RouterImpl {
     async fn route(&self, metrics: &[String], ctx: &RpcContext) -> Result<Vec<Option<Endpoint>>> {
-        let mut target_endpoints = vec![None; metrics.len()];
+        let mut target_endpoints = vec![Some(self.default_endpoint.clone()); metrics.len()];
 
         // Find from cache firstly and collect misses.
         let misses = {
@@ -114,10 +116,13 @@ mod test {
         // Init mock route table
         let metric1 = "metric1".to_string();
         let metric2 = "metric2".to_string();
+        let metric3 = "metric3".to_string();
+        let metric4 = "metric4".to_string();
         let endpoint1 = Endpoint::new("192.168.0.1".to_string(), 11);
         let endpoint2 = Endpoint::new("192.168.0.2".to_string(), 12);
         let endpoint3 = Endpoint::new("192.168.0.3".to_string(), 13);
         let endpoint4 = Endpoint::new("192.168.0.4".to_string(), 14);
+        let default_endpoint = Endpoint::new("192.168.0.5".to_string(), 15);
 
         // Init mock client with route1 and route2
         let route_table = Arc::new(DashMap::default());
@@ -135,7 +140,7 @@ mod test {
         // route --> change route_table --> route again.
         let ctx = RpcContext::new("test".to_string(), "".to_string());
         let metrics = vec![metric1.clone(), metric2.clone()];
-        let route_client = RouterImpl::new(Arc::new(mock_rpc_client));
+        let route_client = RouterImpl::new(default_endpoint.clone(), Arc::new(mock_rpc_client));
         let route_res1 = route_client.route(&metrics, &ctx).await.unwrap();
         assert_eq!(&endpoint1, route_res1.get(0).unwrap().as_ref().unwrap());
         assert_eq!(&endpoint2, route_res1.get(1).unwrap().as_ref().unwrap());
@@ -152,5 +157,15 @@ mod test {
         let route_res3 = route_client.route(&metrics, &ctx).await.unwrap();
         assert_eq!(&endpoint3, route_res3.get(0).unwrap().as_ref().unwrap());
         assert_eq!(&endpoint4, route_res3.get(1).unwrap().as_ref().unwrap());
+
+        let route_res4 = route_client.route(&[metric3, metric4], &ctx).await.unwrap();
+        assert_eq!(
+            &default_endpoint,
+            route_res4.get(0).unwrap().as_ref().unwrap()
+        );
+        assert_eq!(
+            &default_endpoint,
+            route_res4.get(1).unwrap().as_ref().unwrap()
+        );
     }
 }
