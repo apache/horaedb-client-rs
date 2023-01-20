@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 use thiserror::Error as ThisError;
 
-use crate::model::write::WriteResponse;
+use crate::model::write::Response;
 
 #[derive(Debug, ThisError)]
 pub enum Error {
@@ -44,16 +44,22 @@ pub enum Error {
     /// Error unknown
     #[error("unknown error, msg:{0}")]
     Unknown(String),
+
+    #[error("failed to decode, msg:{0}")]
+    BuildRows(String),
+
+    #[error("failed to decode arrow payload, msg:{0}")]
+    DecodeArrowPayload(Box<dyn std::error::Error + Send + Sync>),
 }
 
 #[derive(Debug)]
 pub struct ClusterWriteError {
-    pub ok: (Vec<String>, WriteResponse), // (metrics, write_response)
+    pub ok: (Vec<String>, Response),       // (metrics, write_response)
     pub errors: Vec<(Vec<String>, Error)>, // [(metrics, erros)]
 }
 
-impl From<Vec<(Vec<String>, Result<WriteResponse>)>> for ClusterWriteError {
-    fn from(wirte_results: Vec<(Vec<String>, Result<WriteResponse>)>) -> Self {
+impl From<Vec<(Vec<String>, Result<Response>)>> for ClusterWriteError {
+    fn from(wirte_results: Vec<(Vec<String>, Result<Response>)>) -> Self {
         let mut success_total = 0;
         let mut failed_total = 0;
         let mut ok_metrics = Vec::new();
@@ -72,7 +78,7 @@ impl From<Vec<(Vec<String>, Result<WriteResponse>)>> for ClusterWriteError {
         }
 
         Self {
-            ok: (ok_metrics, WriteResponse::new(success_total, failed_total)),
+            ok: (ok_metrics, Response::new(success_total, failed_total)),
             errors,
         }
     }

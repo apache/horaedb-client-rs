@@ -11,10 +11,9 @@ use super::{inner::InnerClient, DbClient};
 use crate::{
     errors::ClusterWriteError,
     model::{
-        request::QueryRequest,
         route::Endpoint,
-        write::{WriteRequest, WriteResponse},
-        QueryResponse,
+        sql_query::{Request as SqlQueryRequest, Response as SqlQueryResponse},
+        write::{Request as WriteRequest, Response as WriteResponse},
     },
     router::{Router, RouterImpl},
     rpc_client::{RpcClientFactory, RpcContext},
@@ -54,7 +53,7 @@ impl<F: RpcClientFactory> ClusterImpl<F> {
 
 #[async_trait]
 impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse> {
+    async fn query(&self, ctx: &RpcContext, req: &SqlQueryRequest) -> Result<SqlQueryResponse> {
         if req.metrics.is_empty() {
             return Err(Error::Unknown(
                 "Metrics in query request can't be empty in cluster mode".to_string(),

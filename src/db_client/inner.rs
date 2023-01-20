@@ -6,9 +6,8 @@ use tokio::sync::OnceCell;
 
 use crate::{
     model::{
-        request::QueryRequest,
-        write::{WriteRequest, WriteResponse},
-        QueryResponse,
+        sql_query::{Request as SqlQueryRequest, Response as SqlQueryResponse},
+        write::{Request as WriteRequest, Response as WriteResponse},
     },
     rpc_client::{RpcClient, RpcClientFactory, RpcContext},
     Result,
@@ -40,15 +39,15 @@ impl<F: RpcClientFactory> InnerClient<F> {
     pub async fn query_internal(
         &self,
         ctx: &RpcContext,
-        req: &QueryRequest,
-    ) -> Result<QueryResponse> {
+        req: &SqlQueryRequest,
+    ) -> Result<SqlQueryResponse> {
         let client_handle = self.inner_client.get_or_try_init(|| self.init()).await?;
 
         client_handle
             .as_ref()
             .query(ctx, req.clone().into())
             .await
-            .and_then(QueryResponse::try_from)
+            .and_then(SqlQueryResponse::try_from)
     }
 
     pub async fn write_internal(

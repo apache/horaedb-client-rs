@@ -7,8 +7,8 @@ use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use ceresdbproto::storage::{
-    QueryRequest as QueryRequestPb, QueryResponse as QueryResponsePb,
     RouteRequest as RouteRequestPb, RouteResponse as RouteResponsePb,
+    SqlQueryRequest as QueryRequestPb, SqlQueryResponse as QueryResponsePb,
     WriteRequest as WriteRequestPb, WriteResponse as WriteResponsePb,
 };
 pub use mock_rpc_client::MockRpcClient;

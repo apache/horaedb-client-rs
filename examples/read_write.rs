@@ -4,7 +4,11 @@ use std::sync::Arc;
 
 use ceresdb_client_rs::{
     db_client::{Builder, DbClient, Mode},
-    model::{request::QueryRequest, value::Value, write::WriteRequestBuilder},
+    model::{
+        sql_query::{display::CsvFormatter, Request as SqlQueryRequest},
+        value::Value,
+        write::WriteRequestBuilder,
+    },
     RpcConfig, RpcContext,
 };
 use chrono::Local;
@@ -19,9 +23,9 @@ async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
                 bin_field varbinary,
                 t timestamp NOT NULL,
                 TIMESTAMP KEY(t)) ENGINE=Analytic with (enable_ttl='false')"#;
-    let req = QueryRequest {
+    let req = SqlQueryRequest {
         metrics: vec!["ceresdb".to_string()],
-        ql: create_table_sql.to_string(),
+        sql: create_table_sql.to_string(),
     };
     let resp = client
         .query(rpc_ctx, &req)
@@ -32,9 +36,9 @@ async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 
 async fn drop_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let drop_table_sql = "DROP TABLE ceresdb";
-    let req = QueryRequest {
+    let req = SqlQueryRequest {
         metrics: vec!["ceresdb".to_string()],
-        ql: drop_table_sql.to_string(),
+        sql: drop_table_sql.to_string(),
     };
     let _resp = client.query(rpc_ctx, &req).await;
     println!("Drop table success!");
@@ -94,22 +98,13 @@ async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 }
 
 async fn query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
-    let req = QueryRequest {
+    let req = SqlQueryRequest {
         metrics: vec!["ceresdb".to_string()],
-        ql: "select * from ceresdb;".to_string(),
+        sql: "select * from ceresdb;".to_string(),
     };
     let resp = client.query(rpc_ctx, &req).await.unwrap();
-    println!("Rows in the resp:{:?}", resp);
-
-    for (row_id, row) in resp.rows.iter().enumerate() {
-        let format_row: Vec<_> = row
-            .datums
-            .iter()
-            .zip(resp.schema.column_schemas.iter())
-            .map(|(datum, col_schema)| format!("{:?}:{:?}", col_schema.name, datum))
-            .collect();
-        println!("row{}:{:?}", row_id, format_row);
-    }
+    let csv_formatter = CsvFormatter { resp };
+    println!("Rows in the resp:{}", csv_formatter);
 }
 
 #[tokio::main]

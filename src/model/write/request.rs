@@ -5,8 +5,8 @@
 use std::collections::{BTreeMap, HashMap};
 
 use ceresdbproto::storage::{
-    Field, FieldGroup as FieldGroupPb, Tag as TagPb, WriteEntry as WriteEntryPb,
-    WriteMetric as WriteMetricPb, WriteRequest as WriteRequestPb,
+    Field, FieldGroup as FieldGroupPb, Tag as TagPb, WriteRequest as WriteRequestPb,
+    WriteSeriesEntry as WriteSeriesEntryPb, WriteTableRequest as WriteTableRequestPb,
 };
 
 use crate::model::value::{TimestampMs, Value};
@@ -45,7 +45,7 @@ impl WriteRequestBuilder {
         }
     }
 
-    pub fn build(self) -> WriteRequest {
+    pub fn build(self) -> Request {
         let mut partitions_by_metric: HashMap<_, Vec<_>> = HashMap::new();
         for (_, entry) in self.write_entries.into_iter() {
             let partition = match partitions_by_metric.get_mut(&entry.series.metric) {
@@ -57,7 +57,7 @@ impl WriteRequestBuilder {
             partition.push(entry);
         }
 
-        WriteRequest {
+        Request {
             write_entries: partitions_by_metric,
         }
     }
@@ -160,14 +160,14 @@ fn make_series_key(metric: &str, tags: &BTreeMap<String, Value>) -> SeriesKey {
     let mut series_key = metric.as_bytes().to_vec();
     for (name, val) in tags {
         series_key.extend_from_slice(name.as_bytes());
-        series_key.extend_from_slice(&val.as_bytes());
+        series_key.extend_from_slice(&val.to_bytes());
     }
 
     series_key
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct WriteRequest {
+pub struct Request {
     pub write_entries: HashMap<String, Vec<WriteEntry>>,
 }
 
@@ -216,93 +216,101 @@ impl NameDict {
     }
 }
 
-impl From<WriteRequest> for WriteRequestPb {
-    fn from(req: WriteRequest) -> Self {
+impl From<Request> for WriteRequestPb {
+    fn from(req: Request) -> Self {
         let mut req_pb = WriteRequestPb::default();
         // partition the write entries first
-        let mut write_metrics_pb = Vec::with_capacity(req.write_entries.len());
+        let mut table_requests_pb = Vec::with_capacity(req.write_entries.len());
         for (metric, entries) in req.write_entries {
-            write_metrics_pb.push(convert_one_write_metric(metric, entries));
+            table_requests_pb.push(TableRequestPbBuilder::build(metric, entries));
         }
-        req_pb.metrics = write_metrics_pb;
+        req_pb.table_requests = table_requests_pb;
 
         req_pb
     }
 }
 
-fn convert_one_write_metric(metric: String, entries: Vec<WriteEntry>) -> WriteMetricPb {
-    let mut tags_dict = NameDict::new();
-    let mut fields_dict = NameDict::new();
-    let mut wirte_entries_pb = Vec::with_capacity(entries.len());
-    for entry in entries {
-        wirte_entries_pb.push(convert_entry(&mut tags_dict, &mut fields_dict, entry));
+struct TableRequestPbBuilder;
+
+impl TableRequestPbBuilder {
+    pub fn build(table: String, entries: Vec<WriteEntry>) -> WriteTableRequestPb {
+        let mut tags_dict = NameDict::new();
+        let mut fields_dict = NameDict::new();
+        let mut wirte_entries_pb = Vec::with_capacity(entries.len());
+        for entry in entries {
+            wirte_entries_pb.push(Self::build_series_entry(
+                &mut tags_dict,
+                &mut fields_dict,
+                entry,
+            ));
+        }
+
+        WriteTableRequestPb {
+            table,
+            tag_names: tags_dict.convert_ordered(),
+            field_names: fields_dict.convert_ordered(),
+            entries: wirte_entries_pb,
+        }
     }
 
-    WriteMetricPb {
-        metric,
-        tag_names: tags_dict.convert_ordered(),
-        field_names: fields_dict.convert_ordered(),
-        entries: wirte_entries_pb,
-    }
-}
+    fn build_series_entry(
+        tags_dict: &mut NameDict,
+        fields_dict: &mut NameDict,
+        entry: WriteEntry,
+    ) -> WriteSeriesEntryPb {
+        let tags = Self::build_tags(tags_dict, entry.series.tags);
+        let field_groups = Self::build_ts_fields(fields_dict, entry.ts_fields);
 
-fn convert_entry(
-    tags_dict: &mut NameDict,
-    fields_dict: &mut NameDict,
-    entry: WriteEntry,
-) -> WriteEntryPb {
-    WriteEntryPb {
-        tags: convert_tags(tags_dict, entry.series.tags),
-        field_groups: convert_ts_fields(fields_dict, entry.ts_fields),
-    }
-}
-
-fn convert_tags(tags_dict: &mut NameDict, tags: BTreeMap<String, Value>) -> Vec<TagPb> {
-    if tags.is_empty() {
-        return Vec::new();
+        WriteSeriesEntryPb { tags, field_groups }
     }
 
-    let mut tag_pbs = Vec::with_capacity(tags.len());
-    for (name, val) in tags {
-        let tag_pb = TagPb {
-            name_index: tags_dict.insert(name),
-            value: Some(val.into()),
-        };
-        tag_pbs.push(tag_pb);
-    }
+    fn build_tags(tags_dict: &mut NameDict, tags: BTreeMap<String, Value>) -> Vec<TagPb> {
+        if tags.is_empty() {
+            return Vec::new();
+        }
 
-    tag_pbs
-}
-
-fn convert_ts_fields(
-    fields_dict: &mut NameDict,
-    ts_fields: BTreeMap<TimestampMs, Fields>,
-) -> Vec<FieldGroupPb> {
-    if ts_fields.is_empty() {
-        return Vec::new();
-    }
-
-    let mut field_group_pbs = Vec::with_capacity(ts_fields.len());
-    for (ts, fields) in ts_fields {
-        // ts + fields will be converted to field group in pb
-        let mut field_pbs = Vec::with_capacity(fields.len());
-        for (name, val) in fields {
-            let field_pb = Field {
-                name_index: fields_dict.insert(name),
+        let mut tag_pbs = Vec::with_capacity(tags.len());
+        for (name, val) in tags {
+            let tag_pb = TagPb {
+                name_index: tags_dict.insert(name),
                 value: Some(val.into()),
             };
-            field_pbs.push(field_pb);
+            tag_pbs.push(tag_pb);
         }
-        let field_group_pb = FieldGroupPb {
-            timestamp: ts,
-            fields: field_pbs,
-        };
 
-        // collect field group
-        field_group_pbs.push(field_group_pb);
+        tag_pbs
     }
 
-    field_group_pbs
+    fn build_ts_fields(
+        fields_dict: &mut NameDict,
+        ts_fields: BTreeMap<TimestampMs, Fields>,
+    ) -> Vec<FieldGroupPb> {
+        if ts_fields.is_empty() {
+            return Vec::new();
+        }
+
+        let mut field_group_pbs = Vec::with_capacity(ts_fields.len());
+        for (ts, fields) in ts_fields {
+            // ts + fields will be converted to field group in pb
+            let mut field_pbs = Vec::with_capacity(fields.len());
+            for (name, val) in fields {
+                let field_pb = Field {
+                    name_index: fields_dict.insert(name),
+                    value: Some(val.into()),
+                };
+                field_pbs.push(field_pb);
+            }
+            let field_group_pb = FieldGroupPb {
+                timestamp: ts,
+                fields: field_pbs,
+            };
+
+            // collect field group
+            field_group_pbs.push(field_group_pb);
+        }
+
+        field_group_pbs
+    }
 }
 
 #[cfg(test)]
@@ -312,7 +320,7 @@ mod test {
     use ceresdbproto::storage::Value as ValuePb;
     use chrono::Local;
 
-    use super::{convert_tags, convert_ts_fields, make_series_key, NameDict, WriteRequestBuilder};
+    use super::{make_series_key, NameDict, TableRequestPbBuilder, WriteRequestBuilder};
     use crate::model::value::Value;
 
     #[test]
@@ -481,7 +489,7 @@ mod test {
     }
 
     #[test]
-    fn test_convert_tags() {
+    fn test_build_tags() {
         let test_tag1 = ("tag_name1", "tag_val1");
         let test_tag2 = ("tag_name2", 42);
         let test_tag3 = ("tag_name3", b"wewraewfsfjkldsafjkdlsa");
@@ -498,7 +506,7 @@ mod test {
 
         let mut tags_dict = NameDict::new();
 
-        let tags_pb = convert_tags(&mut tags_dict, test_tags.clone());
+        let tags_pb = TableRequestPbBuilder::build_tags(&mut tags_dict, test_tags.clone());
         let tag_names = tags_dict.convert_ordered();
 
         for tag_pb in tags_pb {
@@ -552,7 +560,8 @@ mod test {
         test_ts_fields.insert(ts2, test_fields2);
         // convert and check
         let mut fields_dict = NameDict::new();
-        let field_groups_pb = convert_ts_fields(&mut fields_dict, test_ts_fields.clone());
+        let field_groups_pb =
+            TableRequestPbBuilder::build_ts_fields(&mut fields_dict, test_ts_fields.clone());
         let field_names = fields_dict.convert_ordered();
 
         for f_group in field_groups_pb {

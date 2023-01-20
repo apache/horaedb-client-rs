@@ -4,9 +4,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ceresdbproto::storage::{
-    Endpoint as EndpointPb, QueryRequest as QueryRequestPb, QueryResponse as QueryResponsePb,
-    Route as RoutePb, RouteRequest as RouteRequestPb, RouteResponse as RouteResponsePb,
-    WriteRequest as WriteRequestPb, WriteResponse as WriteResponsePb,
+    Endpoint as EndpointPb, Route as RoutePb, RouteRequest as RouteRequestPb,
+    RouteResponse as RouteResponsePb, SqlQueryRequest as QueryRequestPb,
+    SqlQueryResponse as QueryResponsePb, WriteRequest as WriteRequestPb,
+    WriteResponse as WriteResponsePb,
 };
 use dashmap::DashMap;
 
@@ -34,7 +35,7 @@ impl RpcClient for MockRpcClient {
     async fn route(&self, _ctx: &RpcContext, req: RouteRequestPb) -> Result<RouteResponsePb> {
         let route_tables = self.route_table.clone();
         let routes: Vec<_> = req
-            .metrics
+            .tables
             .iter()
             .filter_map(|m| {
                 let endpoint = match route_tables.get(m.as_str()) {
@@ -46,7 +47,7 @@ impl RpcClient for MockRpcClient {
                     ip: endpoint.addr,
                     port: endpoint.port,
                 };
-                route_pb.metric = m.clone();
+                route_pb.table = m.clone();
                 route_pb.endpoint = Some(endpoint_pb);
                 Some(route_pb)
             })

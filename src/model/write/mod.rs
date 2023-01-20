@@ -3,5 +3,5 @@
 mod request;
 mod response;
 
-pub use request::{is_reserved_column_name, WriteEntry, WriteRequest, WriteRequestBuilder};
-pub use response::WriteResponse;
+pub use request::{is_reserved_column_name, Request, WriteEntry, WriteRequestBuilder};
+pub use response::Response;

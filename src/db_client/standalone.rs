@@ -8,9 +8,8 @@ use super::inner::InnerClient;
 use crate::{
     db_client::DbClient,
     model::{
-        request::QueryRequest,
-        write::{WriteRequest, WriteResponse},
-        QueryResponse,
+        sql_query::{Request as SqlQueryRequest, Response as SqlQueryResponse},
+        write::{Request as WriteRequest, Response as WriteResponse},
     },
     rpc_client::{RpcClientFactory, RpcContext},
     Result,
@@ -33,7 +32,7 @@ impl<F: RpcClientFactory> StandaloneImpl<F> {
 
 #[async_trait]
 impl<F: RpcClientFactory> DbClient for StandaloneImpl<F> {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse> {
+    async fn query(&self, ctx: &RpcContext, req: &SqlQueryRequest) -> Result<SqlQueryResponse> {
         self.inner_client.query_internal(ctx, req).await
     }
 

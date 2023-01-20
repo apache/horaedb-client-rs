@@ -1,13 +1,18 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
 //! 'Value' used in local.
+use std::any::Any;
 
 use ceresdbproto::storage::{value, Value as ValuePb};
 
 pub type TimestampMs = i64;
 
+/// Value in client
+///
+/// NOTICE: funciont `as_xxx` only support the auto conversion from
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Value {
+    Null,
     Timestamp(TimestampMs),
     Double(f64),
     Float(f32),
@@ -25,46 +30,247 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn as_bytes(&self) -> Vec<u8> {
+    pub fn data_type(&self) -> DataType {
+        match self {
+            Value::Null => DataType::Null,
+            Value::Timestamp(_) => DataType::Timestamp,
+            Value::Double(_) => DataType::Double,
+            Value::Float(_) => DataType::Float,
+            Value::Varbinary(_) => DataType::Varbinary,
+            Value::String(_) => DataType::String,
+            Value::UInt64(_) => DataType::UInt64,
+            Value::UInt32(_) => DataType::UInt32,
+            Value::UInt16(_) => DataType::UInt16,
+            Value::UInt8(_) => DataType::UInt8,
+            Value::Int64(_) => DataType::Int64,
+            Value::Int32(_) => DataType::Int32,
+            Value::Int16(_) => DataType::Int16,
+            Value::Int8(_) => DataType::Int8,
+            Value::Boolean(_) => DataType::Boolean,
+        }
+    }
+
+    pub fn is_null(&self) -> bool {
+        matches!(self, Value::Null)
+    }
+
+    pub fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    pub fn as_i8(&self) -> Option<i8> {
+        match self {
+            Value::Boolean(v) => Some(*v as i8),
+            Value::Int8(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    pub fn as_u8(&self) -> Option<u8> {
+        match self {
+            Value::Boolean(v) => Some(*v as u8),
+            Value::Int8(v) => Some(*v as u8),
+            Value::UInt8(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    pub fn as_i16(&self) -> Option<i16> {
+        match self {
+            Value::Boolean(v) => Some(*v as i16),
+            Value::Int8(v) => Some(*v as i16),
+            Value::UInt8(v) => Some(*v as i16),
+            Value::Int16(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    pub fn as_u16(&self) -> Option<u16> {
+        match self {
+            Value::Boolean(v) => Some(*v as u16),
+            Value::Int8(v) => Some(*v as u16),
+            Value::UInt8(v) => Some(*v as u16),
+            Value::Int16(v) => Some(*v as u16),
+            Value::UInt16(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    pub fn as_i32(&self) -> Option<i32> {
+        match self {
+            Value::Boolean(v) => Some(*v as i32),
+            Value::Int8(v) => Some(*v as i32),
+            Value::UInt8(v) => Some(*v as i32),
+            Value::Int16(v) => Some(*v as i32),
+            Value::UInt16(v) => Some(*v as i32),
+            Value::Int32(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    pub fn as_u32(&self) -> Option<u32> {
+        match self {
+            Value::Boolean(v) => Some(*v as u32),
+            Value::Int8(v) => Some(*v as u32),
+            Value::UInt8(v) => Some(*v as u32),
+            Value::Int16(v) => Some(*v as u32),
+            Value::UInt16(v) => Some(*v as u32),
+            Value::Int32(v) => Some(*v as u32),
+            Value::UInt32(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    pub fn as_i64(&self) -> Option<i64> {
+        match self {
+            Value::Boolean(v) => Some(*v as i64),
+            Value::Int8(v) => Some(*v as i64),
+            Value::UInt8(v) => Some(*v as i64),
+            Value::Int16(v) => Some(*v as i64),
+            Value::UInt16(v) => Some(*v as i64),
+            Value::Int32(v) => Some(*v as i64),
+            Value::UInt32(v) => Some(*v as i64),
+            Value::Int64(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    pub fn as_u64(&self) -> Option<u64> {
+        match self {
+            Value::Boolean(v) => Some(*v as u64),
+            Value::Int8(v) => Some(*v as u64),
+            Value::UInt8(v) => Some(*v as u64),
+            Value::Int16(v) => Some(*v as u64),
+            Value::UInt16(v) => Some(*v as u64),
+            Value::Int32(v) => Some(*v as u64),
+            Value::UInt32(v) => Some(*v as u64),
+            Value::Int64(v) => Some(*v as u64),
+            Value::UInt64(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    pub fn as_f32(&self) -> Option<f32> {
+        match self {
+            Value::Float(v) => Some(*v),
+            Value::UInt64(v) => Some(*v as f32),
+            Value::UInt32(v) => Some(*v as f32),
+            Value::UInt16(v) => Some(*v as f32),
+            Value::UInt8(v) => Some(*v as f32),
+            Value::Int64(v) => Some(*v as f32),
+            Value::Int32(v) => Some(*v as f32),
+            Value::Int16(v) => Some(*v as f32),
+            Value::Int8(v) => Some(*v as f32),
+            Value::Boolean(_)
+            | Value::Double(_)
+            | Value::Null
+            | Value::Timestamp(_)
+            | Value::Varbinary(_)
+            | Value::String(_) => None,
+        }
+    }
+
+    pub fn as_f64(&self) -> Option<f64> {
+        match self {
+            Value::Double(v) => Some(*v),
+            Value::Float(v) => Some(*v as f64),
+            Value::UInt64(v) => Some(*v as f64),
+            Value::UInt32(v) => Some(*v as f64),
+            Value::UInt16(v) => Some(*v as f64),
+            Value::UInt8(v) => Some(*v as f64),
+            Value::Int64(v) => Some(*v as f64),
+            Value::Int32(v) => Some(*v as f64),
+            Value::Int16(v) => Some(*v as f64),
+            Value::Int8(v) => Some(*v as f64),
+            Value::Boolean(_)
+            | Value::Null
+            | Value::Timestamp(_)
+            | Value::Varbinary(_)
+            | Value::String(_) => None,
+        }
+    }
+
+    pub fn as_varbinary(&self) -> Option<Vec<u8>> {
         match &self {
-            Value::Timestamp(v) => (*v).to_le_bytes().to_vec(),
-            Value::Double(v) => (*v).to_le_bytes().to_vec(),
-            Value::Float(v) => (*v).to_le_bytes().to_vec(),
+            Value::Varbinary(v) => Some(v.clone()),
+            _ => None,
+        }
+    }
+
+    /// Cast datum to &str.
+    pub fn as_str(&self) -> Option<String> {
+        match self {
+            Value::String(v) => Some(v.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        match self {
+            Value::Null => b"".to_vec(),
+            Value::Timestamp(v) => v.to_le_bytes().to_vec(),
+            Value::Double(v) => v.to_le_bytes().to_vec(),
+            Value::Float(v) => v.to_le_bytes().to_vec(),
             Value::Varbinary(v) => v.clone(),
             Value::String(v) => v.as_bytes().to_vec(),
-            Value::UInt64(v) => (*v).to_le_bytes().to_vec(),
-            Value::UInt32(v) => (*v).to_le_bytes().to_vec(),
-            Value::UInt16(v) => (*v).to_le_bytes().to_vec(),
-            Value::UInt8(v) => (*v).to_le_bytes().to_vec(),
-            Value::Int64(v) => (*v).to_le_bytes().to_vec(),
-            Value::Int32(v) => (*v).to_le_bytes().to_vec(),
-            Value::Int16(v) => (*v).to_le_bytes().to_vec(),
-            Value::Int8(v) => (*v).to_le_bytes().to_vec(),
+            Value::UInt64(v) => v.to_le_bytes().to_vec(),
+            Value::UInt32(v) => v.to_le_bytes().to_vec(),
+            Value::UInt16(v) => v.to_le_bytes().to_vec(),
+            Value::UInt8(v) => v.to_le_bytes().to_vec(),
+            Value::Int64(v) => v.to_le_bytes().to_vec(),
+            Value::Int32(v) => v.to_le_bytes().to_vec(),
+            Value::Int16(v) => v.to_le_bytes().to_vec(),
+            Value::Int8(v) => v.to_le_bytes().to_vec(),
             Value::Boolean(v) => (*v as u8).to_le_bytes().to_vec(),
         }
     }
 }
 
+impl Default for Value {
+    fn default() -> Self {
+        Self::Null
+    }
+}
+
 impl From<Value> for ValuePb {
     fn from(val: Value) -> Self {
-        let mut val_pb = ValuePb::default();
-        match val {
-            Value::Timestamp(v) => val_pb.value = Some(value::Value::TimestampValue(v)),
-            Value::Double(v) => val_pb.value = Some(value::Value::Float64Value(v)),
-            Value::Float(v) => val_pb.value = Some(value::Value::Float32Value(v)),
-            Value::Varbinary(v) => val_pb.value = Some(value::Value::VarbinaryValue(v)),
-            Value::String(v) => val_pb.value = Some(value::Value::StringValue(v)),
-            Value::UInt64(v) => val_pb.value = Some(value::Value::Uint64Value(v)),
-            Value::UInt32(v) => val_pb.value = Some(value::Value::Uint32Value(v)),
-            Value::UInt16(v) => val_pb.value = Some(value::Value::Uint16Value(v.into())),
-            Value::UInt8(v) => val_pb.value = Some(value::Value::Uint8Value(v.into())),
-            Value::Int64(v) => val_pb.value = Some(value::Value::Int64Value(v)),
-            Value::Int32(v) => val_pb.value = Some(value::Value::Int32Value(v)),
-            Value::Int16(v) => val_pb.value = Some(value::Value::Int16Value(v.into())),
-            Value::Int8(v) => val_pb.value = Some(value::Value::Int8Value(v.into())),
-            Value::Boolean(v) => val_pb.value = Some(value::Value::BoolValue(v)),
+        let value = match val {
+            Value::Null => None,
+            Value::Timestamp(v) => Some(value::Value::TimestampValue(v)),
+            Value::Double(v) => Some(value::Value::Float64Value(v)),
+            Value::Float(v) => Some(value::Value::Float32Value(v)),
+            Value::Varbinary(v) => Some(value::Value::VarbinaryValue(v)),
+            Value::String(v) => Some(value::Value::StringValue(v)),
+            Value::UInt64(v) => Some(value::Value::Uint64Value(v)),
+            Value::UInt32(v) => Some(value::Value::Uint32Value(v)),
+            Value::UInt16(v) => Some(value::Value::Uint16Value(v.into())),
+            Value::UInt8(v) => Some(value::Value::Uint8Value(v.into())),
+            Value::Int64(v) => Some(value::Value::Int64Value(v)),
+            Value::Int32(v) => Some(value::Value::Int32Value(v)),
+            Value::Int16(v) => Some(value::Value::Int16Value(v.into())),
+            Value::Int8(v) => Some(value::Value::Int8Value(v.into())),
+            Value::Boolean(v) => Some(value::Value::BoolValue(v)),
         };
 
-        val_pb
+        ValuePb { value }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataType {
+    Null = 0,
+    Timestamp,
+    Double,
+    Float,
+    Varbinary,
+    String,
+    UInt64,
+    UInt32,
+    UInt16,
+    UInt8,
+    Int64,
+    Int32,
+    Int16,
+    Int8,
+    Boolean,
 }

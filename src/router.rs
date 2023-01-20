@@ -47,13 +47,13 @@ impl RouterImpl {
 
 #[async_trait]
 impl Router for RouterImpl {
-    async fn route(&self, metrics: &[String], ctx: &RpcContext) -> Result<Vec<Option<Endpoint>>> {
-        let mut target_endpoints = vec![Some(self.default_endpoint.clone()); metrics.len()];
+    async fn route(&self, tables: &[String], ctx: &RpcContext) -> Result<Vec<Option<Endpoint>>> {
+        let mut target_endpoints = vec![Some(self.default_endpoint.clone()); tables.len()];
 
         // Find from cache firstly and collect misses.
         let misses = {
             let mut misses = HashMap::new();
-            for (idx, metric) in metrics.iter().enumerate() {
+            for (idx, metric) in tables.iter().enumerate() {
                 match self.cache.get(metric) {
                     Some(pair) => {
                         target_endpoints[idx] = Some(pair.value().clone());
@@ -69,8 +69,8 @@ impl Router for RouterImpl {
 
         // Get endpoints of misses from remote.
         let mut req = RouteRequest::default();
-        let miss_metrics = misses.iter().map(|(m, _)| m.clone()).collect();
-        req.metrics = miss_metrics;
+        let miss_tables = misses.iter().map(|(m, _)| m.clone()).collect();
+        req.tables = miss_tables;
         let resp = self.rpc_client.route(ctx, req).await?;
 
         // Fill miss endpoint and update cache.
@@ -81,11 +81,11 @@ impl Router for RouterImpl {
             }
 
             // Impossible to get none.
-            let idx = misses.get(&route.metric).ok_or_else(|| {
-                Error::Unknown(format!("Unknown metric:{} in response", route.metric))
+            let idx = misses.get(&route.table).ok_or_else(|| {
+                Error::Unknown(format!("Unknown table:{} in response", route.table))
             })?;
             let endpoint: Endpoint = route.endpoint.unwrap().into();
-            self.cache.insert(route.metric, endpoint.clone());
+            self.cache.insert(route.table, endpoint.clone());
             target_endpoints[*idx] = Some(endpoint);
         }
 
