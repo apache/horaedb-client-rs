@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Rpc client impl
+
 use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;

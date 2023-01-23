@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! [Router] in client
+
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
@@ -53,14 +55,14 @@ impl Router for RouterImpl {
         // Find from cache firstly and collect misses.
         let misses = {
             let mut misses = HashMap::new();
-            for (idx, metric) in tables.iter().enumerate() {
-                match self.cache.get(metric) {
+            for (idx, table) in tables.iter().enumerate() {
+                match self.cache.get(table) {
                     Some(pair) => {
                         target_endpoints[idx] = Some(pair.value().clone());
                     }
 
                     None => {
-                        misses.insert(metric.clone(), idx);
+                        misses.insert(table.clone(), idx);
                     }
                 }
             }

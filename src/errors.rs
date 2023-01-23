@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Error in client
+
 use std::fmt::Display;
 
 use thiserror::Error as ThisError;

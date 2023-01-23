@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Inner client
+
 use std::sync::Arc;
 
 use tokio::sync::OnceCell;

@@ -7,7 +7,7 @@ use ceresdb_client_rs::{
     model::{
         sql_query::{display::CsvFormatter, Request as SqlQueryRequest},
         value::Value,
-        write::WriteRequestBuilder,
+        write::{point::PointGroupBuilder, Request as WriteRequest},
     },
     RpcConfig, RpcContext,
 };
@@ -22,7 +22,8 @@ async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
                 int_field int32,
                 bin_field varbinary,
                 t timestamp NOT NULL,
-                TIMESTAMP KEY(t)) ENGINE=Analytic with (enable_ttl='false')"#;
+                TIMESTAMP KEY(t)) ENGINE=Analytic with
+(enable_ttl='false')"#;
     let req = SqlQueryRequest {
         metrics: vec!["ceresdb".to_string()],
         sql: create_table_sql.to_string(),
@@ -40,17 +41,20 @@ async fn drop_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
         metrics: vec!["ceresdb".to_string()],
         sql: drop_table_sql.to_string(),
     };
-    let _resp = client.query(rpc_ctx, &req).await;
+    let _resp = client
+        .query(rpc_ctx, &req)
+        .await
+        .expect("Should succeed to drop table");
     println!("Drop table success!");
 }
 
 async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let ts1 = Local::now().timestamp_millis();
-    let mut write_req_builder = WriteRequestBuilder::default();
-    // first row
-    write_req_builder
-        .row_builder()
-        .metric("ceresdb".to_string())
+    let mut write_req = WriteRequest::default();
+    let point_group_builder = PointGroupBuilder::new("ceresdb".to_string());
+
+    let point_group = point_group_builder
+        .point_builder()
         .timestamp(ts1)
         .tag("str_tag".to_string(), Value::String("tag_val1".to_string()))
         .tag("int_tag".to_string(), Value::Int32(42))
@@ -68,12 +72,8 @@ async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
             Value::Varbinary(b"field_bin_val1".to_vec()),
         )
         .finish()
-        .unwrap();
-
-    // second row
-    write_req_builder
-        .row_builder()
-        .metric("ceresdb".to_string())
+        .unwrap()
+        .point_builder()
         .timestamp(ts1 + 40)
         .tag("str_tag".to_string(), Value::String("tag_val2".to_string()))
         .tag("int_tag".to_string(), Value::Int32(43))
@@ -90,10 +90,15 @@ async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
             Value::Varbinary(b"field_bin_val2".to_vec()),
         )
         .finish()
-        .unwrap();
+        .unwrap()
+        .build();
 
-    let write_req = write_req_builder.build();
-    let res = client.write(rpc_ctx, &write_req).await;
+    write_req.add_point_group(point_group);
+
+    let res = client
+        .write(rpc_ctx, &write_req)
+        .await
+        .expect("Should success to write");
     println!("{:?}", res);
 }
 
@@ -104,7 +109,7 @@ async fn query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     };
     let resp = client.query(rpc_ctx, &req).await.unwrap();
     let csv_formatter = CsvFormatter { resp };
-    println!("Rows in the resp:{}", csv_formatter);
+    println!("Rows in the resp:\n{}", csv_formatter);
 }
 
 #[tokio::main]

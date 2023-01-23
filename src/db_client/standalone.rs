@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Client for standalone mode
+
 use std::sync::Arc;
 
 use async_trait::async_trait;

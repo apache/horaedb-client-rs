@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Client for cluster mode
+
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
@@ -67,7 +69,7 @@ impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
                     ep
                 } else {
                     return Err(Error::Unknown(
-                        "Metric doesn't have corresponding endpoint".to_string(),
+                        "table doesn't have corresponding endpoint".to_string(),
                     ));
                 }
             }
@@ -86,7 +88,7 @@ impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
 
     async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResponse> {
         // Get metrics' related endpoints(some may not exist).
-        let should_routes: Vec<_> = req.write_entries.iter().map(|(m, _)| m.clone()).collect();
+        let should_routes: Vec<_> = req.point_groups.iter().map(|(m, _)| m.clone()).collect();
         let router_handle = self.router.get_or_try_init(|| self.init_router()).await?;
         let endpoints = router_handle.route(&should_routes, ctx).await?;
 
@@ -101,9 +103,9 @@ impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
                     let write_req = partition_by_endpoint
                         .entry(ep)
                         .or_insert_with(WriteRequest::default);
-                    write_req.write_entries.insert(
+                    write_req.point_groups.insert(
                         m.clone(),
-                        req.write_entries.get(m.as_str()).cloned().unwrap(),
+                        req.point_groups.get(m.as_str()).cloned().unwrap(),
                     );
                 }
                 None => {
@@ -118,7 +120,7 @@ impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
             .enumerate()
             .map(|(idx, (ep, req))| {
                 assert!(idx < write_metrics.len());
-                write_metrics[idx].extend(req.write_entries.iter().map(|(m, _)| m.clone()));
+                write_metrics[idx].extend(req.point_groups.iter().map(|(m, _)| m.clone()));
                 (self.standalone_pool.get_or_create(&ep), req)
             })
             .collect();

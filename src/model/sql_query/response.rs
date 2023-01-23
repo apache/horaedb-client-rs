@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Sql query response
+
 use std::io::Cursor;
 
 use arrow::{ipc::reader::StreamReader, record_batch::RecordBatch};

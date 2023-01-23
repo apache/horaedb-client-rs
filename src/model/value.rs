@@ -1,8 +1,10 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-//! 'Value' used in local.
+//! [Value] used in client
+
 use std::any::Any;
 
+// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 use ceresdbproto::storage::{value, Value as ValuePb};
 
 pub type TimestampMs = i64;
@@ -253,6 +255,32 @@ impl From<Value> for ValuePb {
         };
 
         ValuePb { value }
+    }
+}
+
+impl From<ValuePb> for Value {
+    fn from(value_pb: ValuePb) -> Self {
+        if value_pb.value.is_none() {
+            return Value::Null;
+        }
+
+        let value = value_pb.value.unwrap();
+        match value {
+            value::Value::Float64Value(v) => Value::Double(v),
+            value::Value::StringValue(v) => Value::String(v),
+            value::Value::Int64Value(v) => Value::Int64(v),
+            value::Value::Float32Value(v) => Value::Float(v),
+            value::Value::Int32Value(v) => Value::Int32(v),
+            value::Value::Int16Value(v) => Value::Int16(v as i16),
+            value::Value::Int8Value(v) => Value::Int8(v as i8),
+            value::Value::BoolValue(v) => Value::Boolean(v),
+            value::Value::Uint64Value(v) => Value::UInt64(v),
+            value::Value::Uint32Value(v) => Value::UInt32(v),
+            value::Value::Uint16Value(v) => Value::UInt16(v as u16),
+            value::Value::Uint8Value(v) => Value::UInt8(v as u8),
+            value::Value::TimestampValue(v) => Value::Timestamp(v),
+            value::Value::VarbinaryValue(v) => Value::Varbinary(v),
+        }
     }
 }
 

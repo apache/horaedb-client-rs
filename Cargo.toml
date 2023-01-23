@@ -19,11 +19,6 @@ zstd = { version = "0.12", default-features = false }
 git = "https://github.com/mrrtree/ceresdbproto.git"
 rev = "89e166b3077998046a4353cac82b44853de7ee74"
 
-[dependencies.common_types]
-git = "https://github.com/CeresDB/ceresdb.git"
-rev = "813992230dc4fb89d314aae4a0ed0cf5f648a6e1"
-default-features = false
-
 [dev-dependencies]
 chrono = "0.4"
 tokio = { version = "1.15", features = ["full"] }

@@ -1,6 +1,8 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-/// Server status code.
+//! Utils in client
+
+/// Server status code
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum StatusCode {

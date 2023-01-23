@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Rpc client
+
 mod mock_rpc_client;
 mod rpc_client_impl;
 

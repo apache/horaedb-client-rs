@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Display for sql query response
+
 use std::fmt::Display;
 
 use crate::model::sql_query::response::Response;
