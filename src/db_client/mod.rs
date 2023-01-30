@@ -21,6 +21,6 @@ use crate::{
 
 #[async_trait]
 pub trait DbClient: Send + Sync {
-    async fn query(&self, ctx: &RpcContext, req: &SqlQueryRequest) -> Result<SqlQueryResponse>;
+    async fn sql_query(&self, ctx: &RpcContext, req: &SqlQueryRequest) -> Result<SqlQueryResponse>;
     async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResponse>;
 }

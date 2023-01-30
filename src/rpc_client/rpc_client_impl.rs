@@ -75,7 +75,7 @@ impl RpcClientImpl {
 
 #[async_trait]
 impl RpcClient for RpcClientImpl {
-    async fn query(&self, ctx: &RpcContext, req: SqlQueryRequest) -> Result<SqlQueryResponse> {
+    async fn sql_query(&self, ctx: &RpcContext, req: SqlQueryRequest) -> Result<SqlQueryResponse> {
         let interceptor = AuthInterceptor::new(ctx)?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);

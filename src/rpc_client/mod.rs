@@ -47,7 +47,7 @@ impl RpcContext {
 
 #[async_trait]
 pub trait RpcClient: Send + Sync {
-    async fn query(&self, ctx: &RpcContext, req: QueryRequestPb) -> Result<QueryResponsePb>;
+    async fn sql_query(&self, ctx: &RpcContext, req: QueryRequestPb) -> Result<QueryResponsePb>;
     async fn write(&self, ctx: &RpcContext, req: WriteRequestPb) -> Result<WriteResponsePb>;
     async fn route(&self, ctx: &RpcContext, req: RouteRequestPb) -> Result<RouteResponsePb>;
 }

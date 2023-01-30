@@ -55,7 +55,7 @@ impl<F: RpcClientFactory> ClusterImpl<F> {
 
 #[async_trait]
 impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
-    async fn query(&self, ctx: &RpcContext, req: &SqlQueryRequest) -> Result<SqlQueryResponse> {
+    async fn sql_query(&self, ctx: &RpcContext, req: &SqlQueryRequest) -> Result<SqlQueryResponse> {
         if req.metrics.is_empty() {
             return Err(Error::Unknown(
                 "Metrics in query request can't be empty in cluster mode".to_string(),
@@ -80,7 +80,7 @@ impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
 
         let client = self.standalone_pool.get_or_create(&endpoint).clone();
 
-        client.query_internal(ctx, req).await.map_err(|e| {
+        client.sql_query_internal(ctx, req).await.map_err(|e| {
             router_handle.evict(&req.metrics);
             e
         })

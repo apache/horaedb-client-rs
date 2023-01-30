@@ -38,7 +38,7 @@ impl<F: RpcClientFactory> InnerClient<F> {
         self.factory.build(self.endpoint.clone()).await
     }
 
-    pub async fn query_internal(
+    pub async fn sql_query_internal(
         &self,
         ctx: &RpcContext,
         req: &SqlQueryRequest,
@@ -47,7 +47,7 @@ impl<F: RpcClientFactory> InnerClient<F> {
 
         client_handle
             .as_ref()
-            .query(ctx, req.clone().into())
+            .sql_query(ctx, req.clone().into())
             .await
             .and_then(SqlQueryResponse::try_from)
     }

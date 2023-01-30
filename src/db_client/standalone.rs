@@ -34,8 +34,8 @@ impl<F: RpcClientFactory> StandaloneImpl<F> {
 
 #[async_trait]
 impl<F: RpcClientFactory> DbClient for StandaloneImpl<F> {
-    async fn query(&self, ctx: &RpcContext, req: &SqlQueryRequest) -> Result<SqlQueryResponse> {
-        self.inner_client.query_internal(ctx, req).await
+    async fn sql_query(&self, ctx: &RpcContext, req: &SqlQueryRequest) -> Result<SqlQueryResponse> {
+        self.inner_client.sql_query_internal(ctx, req).await
     }
 
     async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResponse> {

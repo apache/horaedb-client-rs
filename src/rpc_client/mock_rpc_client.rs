@@ -26,7 +26,7 @@ pub struct MockRpcClient {
 
 #[async_trait]
 impl RpcClient for MockRpcClient {
-    async fn query(&self, _ctx: &RpcContext, _req: QueryRequestPb) -> Result<QueryResponsePb> {
+    async fn sql_query(&self, _ctx: &RpcContext, _req: QueryRequestPb) -> Result<QueryResponsePb> {
         todo!()
     }
 

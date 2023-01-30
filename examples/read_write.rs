@@ -29,7 +29,7 @@ async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
         sql: create_table_sql.to_string(),
     };
     let resp = client
-        .query(rpc_ctx, &req)
+        .sql_query(rpc_ctx, &req)
         .await
         .expect("Should succeed to create table");
     println!("Create table result:{:?}", resp);
@@ -42,7 +42,7 @@ async fn drop_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
         sql: drop_table_sql.to_string(),
     };
     let _resp = client
-        .query(rpc_ctx, &req)
+        .sql_query(rpc_ctx, &req)
         .await
         .expect("Should succeed to drop table");
     println!("Drop table success!");
@@ -102,12 +102,12 @@ async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     println!("{:?}", res);
 }
 
-async fn query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
+async fn sql_query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let req = SqlQueryRequest {
         metrics: vec!["ceresdb".to_string()],
         sql: "select * from ceresdb;".to_string(),
     };
-    let resp = client.query(rpc_ctx, &req).await.unwrap();
+    let resp = client.sql_query(rpc_ctx, &req).await.unwrap();
     let csv_formatter = CsvFormatter { resp };
     println!("Rows in the resp:\n{}", csv_formatter);
 }
@@ -130,7 +130,7 @@ async fn main() {
     println!("------------------------------------------------------------------");
 
     println!("### read:");
-    query(&client, &rpc_ctx).await;
+    sql_query(&client, &rpc_ctx).await;
     println!("------------------------------------------------------------------");
 
     println!("### drop table:");
