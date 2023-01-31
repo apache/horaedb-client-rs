@@ -126,7 +126,7 @@ impl PointGroupBuilder {
     }
 
     #[must_use]
-    pub fn point_builder(self) -> PointBuilder {
+    pub fn add_point(self) -> PointBuilder {
         PointBuilder::new(self)
     }
 

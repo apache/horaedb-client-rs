@@ -10,8 +10,9 @@ use crate::{
     RpcConfig, RpcOptions,
 };
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub enum Mode {
+enum Mode {
     Standalone,
     Cluster,
 }
@@ -31,7 +32,12 @@ pub struct Builder {
 }
 
 impl Builder {
-    pub fn new(endpoint: String, mode: Mode) -> Self {
+    pub fn new(endpoint: String) -> Self {
+        Self::new_with_mode(endpoint, Mode::Cluster)
+    }
+
+    // We hide this detail new method for the convenience of users.
+    fn new_with_mode(endpoint: String, mode: Mode) -> Self {
         Self {
             mode,
             endpoint,
@@ -58,7 +64,6 @@ impl Builder {
 
         match self.mode {
             Mode::Standalone => Arc::new(StandaloneImpl::new(rpc_client_factory, self.endpoint)),
-
             Mode::Cluster => Arc::new(ClusterImpl::new(rpc_client_factory, self.endpoint)),
         }
     }

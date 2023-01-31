@@ -56,31 +56,31 @@ pub enum Error {
 
 #[derive(Debug)]
 pub struct ClusterWriteError {
-    pub ok: (Vec<String>, Response),       // (metrics, write_response)
-    pub errors: Vec<(Vec<String>, Error)>, // [(metrics, erros)]
+    pub ok: (Vec<String>, Response),       // (tables, write_response)
+    pub errors: Vec<(Vec<String>, Error)>, // [(tables, erros)]
 }
 
 impl From<Vec<(Vec<String>, Result<Response>)>> for ClusterWriteError {
     fn from(wirte_results: Vec<(Vec<String>, Result<Response>)>) -> Self {
         let mut success_total = 0;
         let mut failed_total = 0;
-        let mut ok_metrics = Vec::new();
+        let mut ok_tables = Vec::new();
         let mut errors = Vec::new();
-        for (metrics, write_result) in wirte_results {
+        for (tables, write_result) in wirte_results {
             match write_result {
                 Ok(write_resp) => {
                     success_total += write_resp.success;
                     failed_total += write_resp.failed;
-                    ok_metrics.extend(metrics);
+                    ok_tables.extend(tables);
                 }
                 Err(e) => {
-                    errors.push((metrics, e));
+                    errors.push((tables, e));
                 }
             }
         }
 
         Self {
-            ok: (ok_metrics, Response::new(success_total, failed_total)),
+            ok: (ok_tables, Response::new(success_total, failed_total)),
             errors,
         }
     }

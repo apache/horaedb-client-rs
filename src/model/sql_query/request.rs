@@ -8,14 +8,14 @@ use ceresdbproto::storage::SqlQueryRequest;
 /// Avoid exposed interfaces explicitly depending on ceresproto
 #[derive(Debug, Clone)]
 pub struct Request {
-    pub metrics: Vec<String>,
+    pub tables: Vec<String>,
     pub sql: String,
 }
 
 impl From<Request> for SqlQueryRequest {
     fn from(req: Request) -> Self {
         SqlQueryRequest {
-            tables: req.metrics,
+            tables: req.tables,
             sql: req.sql,
         }
     }

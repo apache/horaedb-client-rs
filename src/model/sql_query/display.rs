@@ -26,7 +26,7 @@ impl Display for CsvFormatter {
             // Get and output rows.
             for row in &self.resp.rows {
                 for col_name in &col_names {
-                    let value = row.column(col_name).unwrap();
+                    let value = row.column_value(col_name).unwrap();
                     f.write_fmt(format_args!("{:?},", value))?;
                 }
                 f.write_str("\n")?;

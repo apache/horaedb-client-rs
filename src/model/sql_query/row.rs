@@ -24,7 +24,7 @@ pub struct Row {
 }
 
 impl Row {
-    pub fn column(&self, name: &str) -> Option<&Value> {
+    pub fn column_value(&self, name: &str) -> Option<&Value> {
         self.values.get(name)
     }
 

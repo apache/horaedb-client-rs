@@ -8,7 +8,7 @@ mod inner;
 mod standalone;
 
 use async_trait::async_trait;
-pub use builder::{Builder, Mode};
+pub use builder::Builder;
 
 use crate::{
     model::{

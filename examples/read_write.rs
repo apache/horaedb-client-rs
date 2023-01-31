@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use ceresdb_client_rs::{
-    db_client::{Builder, DbClient, Mode},
+    db_client::{Builder, DbClient},
     model::{
         sql_query::{display::CsvFormatter, Request as SqlQueryRequest},
         value::Value,
@@ -25,7 +25,7 @@ async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
                 TIMESTAMP KEY(t)) ENGINE=Analytic with
 (enable_ttl='false')"#;
     let req = SqlQueryRequest {
-        metrics: vec!["ceresdb".to_string()],
+        tables: vec!["ceresdb".to_string()],
         sql: create_table_sql.to_string(),
     };
     let resp = client
@@ -38,7 +38,7 @@ async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 async fn drop_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let drop_table_sql = "DROP TABLE ceresdb";
     let req = SqlQueryRequest {
-        metrics: vec!["ceresdb".to_string()],
+        tables: vec!["ceresdb".to_string()],
         sql: drop_table_sql.to_string(),
     };
     let _resp = client
@@ -54,7 +54,7 @@ async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let point_group_builder = PointGroupBuilder::new("ceresdb".to_string());
 
     let point_group = point_group_builder
-        .point_builder()
+        .add_point()
         .timestamp(ts1)
         .tag("str_tag".to_string(), Value::String("tag_val1".to_string()))
         .tag("int_tag".to_string(), Value::Int32(42))
@@ -73,7 +73,7 @@ async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
         )
         .finish()
         .unwrap()
-        .point_builder()
+        .add_point()
         .timestamp(ts1 + 40)
         .tag("str_tag".to_string(), Value::String("tag_val2".to_string()))
         .tag("int_tag".to_string(), Value::Int32(43))
@@ -104,7 +104,7 @@ async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 
 async fn sql_query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let req = SqlQueryRequest {
-        metrics: vec!["ceresdb".to_string()],
+        tables: vec!["ceresdb".to_string()],
         sql: "select * from ceresdb;".to_string(),
     };
     let resp = client.sql_query(rpc_ctx, &req).await.unwrap();
@@ -115,7 +115,7 @@ async fn sql_query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 #[tokio::main]
 async fn main() {
     // you should ensure ceresdb is running, and grpc port is set to 8831
-    let client = Builder::new("127.0.0.1:8831".to_string(), Mode::Standalone)
+    let client = Builder::new("127.0.0.1:8831".to_string())
         .grpc_config(RpcConfig::default())
         .build();
     let rpc_ctx = RpcContext::new("public".to_string(), "".to_string());

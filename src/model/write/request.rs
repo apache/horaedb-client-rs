@@ -253,11 +253,11 @@ mod test {
     };
 
     #[test]
-    fn test_build_write_metric() {
+    fn test_build_write_table() {
         let ts1 = Local::now().timestamp_millis();
         let ts2 = ts1 + 50;
         // With same table and tags.
-        let test_metric = "test_metric";
+        let test_table = "test_table";
         let test_tag1 = ("test_tag1", 42);
         let test_tag2 = ("test_tag2", "test_tag_val");
         let test_field1 = ("test_field1", 42);
@@ -266,12 +266,12 @@ mod test {
         // With same table but different tags.
         let test_tag3 = ("test_tag1", b"binarybinary");
         // With different table.
-        let test_metric2 = "test_metric2";
+        let test_table2 = "test_table2";
 
         // Build write request.
-        let points_builder = PointGroupBuilder::new(test_metric.to_string());
+        let points_builder = PointGroupBuilder::new(test_table.to_string());
         let points = points_builder
-            .point_builder()
+            .add_point()
             .timestamp(ts1)
             .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
             .tag(
@@ -281,7 +281,7 @@ mod test {
             .field(test_field1.0.to_owned(), Value::Int32(test_field1.1))
             .finish()
             .unwrap()
-            .point_builder()
+            .add_point()
             .timestamp(ts1)
             .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
             .tag(
@@ -294,7 +294,7 @@ mod test {
             )
             .finish()
             .unwrap()
-            .point_builder()
+            .add_point()
             .timestamp(ts2)
             .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
             .tag(
@@ -304,7 +304,7 @@ mod test {
             .field(test_field3.0.to_owned(), Value::Double(test_field3.1))
             .finish()
             .unwrap()
-            .point_builder()
+            .add_point()
             .timestamp(ts1)
             .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
             .tag(
@@ -320,9 +320,9 @@ mod test {
             .unwrap()
             .build();
 
-        let points_builder2 = PointGroupBuilder::new(test_metric2.to_string());
+        let points_builder2 = PointGroupBuilder::new(test_table2.to_string());
         let points2 = points_builder2
-            .point_builder()
+            .add_point()
             .timestamp(ts1)
             .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
             .tag(
