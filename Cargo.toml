@@ -5,19 +5,20 @@ authors = ["CeresDB Authors <ceresdbservice@gmail.com>"]
 edition = "2021"
 
 [dependencies]
+arrow = "23.0.0"
 async-trait = "0.1.57"
 dashmap = "5.3.4"
 futures = "0.3"
-tonic = "0.8.1"
-tokio = "1.15"
-thiserror = "1.0.38"
-arrow = "23.0.0"
 paste = "1.0"
+thiserror = "1.0.38"
+tokio = "1.15"
+tonic = "0.8.1"
 zstd = { version = "0.12", default-features = false }
 
+
 [dependencies.ceresdbproto]
-git = "https://github.com/mrrtree/ceresdbproto.git"
-rev = "89e166b3077998046a4353cac82b44853de7ee74"
+git = "https://github.com/CeresDB/ceresdbproto.git"
+rev = "55495dd395d12a1f97f6c98e355290671d107c44"
 
 [dev-dependencies]
 chrono = "0.4"

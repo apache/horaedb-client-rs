@@ -17,7 +17,7 @@ use paste::paste;
 
 use crate::{model::value::Value, Error, Result};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Row {
     // It is better to iterate in a fixed order, also can save memory.
     values: BTreeMap<String, Value>,
@@ -180,11 +180,125 @@ impl RowBuilder {
             // Encounter unsupported type.
             _ => {
                 return Err(Error::BuildRows(format!(
-                    "found unsupported arrow type:{}",
+                    "found unsupported arrow ty:{}",
                     arrow_type
                 )));
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{collections::BTreeMap, sync::Arc};
+
+    use arrow::{
+        array::{
+            BinaryArray, Int32Array, StringArray, Time32MillisecondArray, TimestampMillisecondArray,
+        },
+        datatypes::{DataType, Field, Schema},
+        record_batch::RecordBatch,
+    };
+
+    use super::{Row, RowBuilder};
+    use crate::model::value::Value;
+
+    #[test]
+    fn test_build_row() {
+        let int_values = vec![1, 2, 3];
+        let string_values = vec![
+            "test1".to_string(),
+            "test2".to_string(),
+            "test3".to_string(),
+        ];
+        let binary_values = vec![b"0.1".as_slice(), b"0.2".as_slice(), b"0.3".as_slice()];
+        let timestamp_values = vec![1001, 1002, 1003];
+        let timestamp32_values = vec![1004, 1005, 1006];
+        // Built rows.
+        let int_array = Int32Array::from(int_values.clone());
+        let string_array = StringArray::from(string_values.clone());
+        let binary_array = BinaryArray::from(binary_values.clone());
+        let timestamp_array = TimestampMillisecondArray::from(timestamp_values.clone());
+        let timestamp32_array = Time32MillisecondArray::from(timestamp32_values.clone());
+        let schema = Schema::new(vec![
+            Field::new("int", DataType::Int32, false),
+            Field::new("string", DataType::Utf8, false),
+            Field::new("varbinary", DataType::Binary, false),
+            Field::new(
+                "timestamp",
+                DataType::Timestamp(arrow::datatypes::TimeUnit::Millisecond, None),
+                false,
+            ),
+            Field::new(
+                "timestamp32",
+                DataType::Time32(arrow::datatypes::TimeUnit::Millisecond),
+                false,
+            ),
+        ]);
+        let arrow_batch = RecordBatch::try_new(
+            Arc::new(schema),
+            vec![
+                Arc::new(int_array),
+                Arc::new(string_array),
+                Arc::new(binary_array),
+                Arc::new(timestamp_array),
+                Arc::new(timestamp32_array),
+            ],
+        )
+        .unwrap();
+
+        let built_rows = RowBuilder::with_arrow_record_batch(arrow_batch)
+            .unwrap()
+            .build();
+
+        // Expected rows
+        let int_col_values = int_values.into_iter().map(Value::Int32).collect::<Vec<_>>();
+        let string_col_values = string_values
+            .into_iter()
+            .map(Value::String)
+            .collect::<Vec<_>>();
+        let binary_col_values = binary_values
+            .into_iter()
+            .map(|v| Value::Varbinary(v.to_vec()))
+            .collect::<Vec<_>>();
+        let timestamp_col_values = timestamp_values
+            .into_iter()
+            .map(|v| Value::Timestamp(v as i64))
+            .collect::<Vec<_>>();
+        let timestamp32_col_values = timestamp32_values
+            .into_iter()
+            .map(|v| Value::Timestamp(v as i64))
+            .collect::<Vec<_>>();
+        let row1 = Row {
+            values: BTreeMap::from([
+                ("int".to_string(), int_col_values[0].clone()),
+                ("string".to_string(), string_col_values[0].clone()),
+                ("varbinary".to_string(), binary_col_values[0].clone()),
+                ("timestamp".to_string(), timestamp_col_values[0].clone()),
+                ("timestamp32".to_string(), timestamp32_col_values[0].clone()),
+            ]),
+        };
+        let row2 = Row {
+            values: BTreeMap::from([
+                ("int".to_string(), int_col_values[1].clone()),
+                ("string".to_string(), string_col_values[1].clone()),
+                ("varbinary".to_string(), binary_col_values[1].clone()),
+                ("timestamp".to_string(), timestamp_col_values[1].clone()),
+                ("timestamp32".to_string(), timestamp32_col_values[1].clone()),
+            ]),
+        };
+        let row3 = Row {
+            values: BTreeMap::from([
+                ("int".to_string(), int_col_values[2].clone()),
+                ("string".to_string(), string_col_values[2].clone()),
+                ("varbinary".to_string(), binary_col_values[2].clone()),
+                ("timestamp".to_string(), timestamp_col_values[2].clone()),
+                ("timestamp32".to_string(), timestamp32_col_values[2].clone()),
+            ]),
+        };
+        let expected_rows = vec![row1, row2, row3];
+
+        assert_eq!(built_rows, expected_rows);
     }
 }
