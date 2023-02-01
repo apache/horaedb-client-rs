@@ -4,9 +4,9 @@
 
 use arrow::{
     array::{
-        ArrayRef, BinaryArray, BooleanArray, Int16Array, Int32Array, Int64Array, Int8Array,
-        StringArray, Time32MillisecondArray, TimestampMillisecondArray, UInt16Array, UInt32Array,
-        UInt64Array, UInt8Array,
+        ArrayRef, BinaryArray, BooleanArray, Float32Array, Float64Array, Int16Array, Int32Array,
+        Int64Array, Int8Array, StringArray, Time32MillisecondArray, TimestampMillisecondArray,
+        UInt16Array, UInt32Array, UInt64Array, UInt8Array,
     },
     datatypes::{DataType, TimeUnit},
     record_batch::RecordBatch,
@@ -154,10 +154,10 @@ impl RowBuilder {
                 fill_column!(arrow_column, UInt64Array, Value::UInt64, rows, col_idx);
             }
             DataType::Float32 => {
-                fill_column!(arrow_column, Int8Array, Value::Int8, rows, col_idx);
+                fill_column!(arrow_column, Float32Array, Value::Float, rows, col_idx);
             }
             DataType::Float64 => {
-                fill_column!(arrow_column, Int8Array, Value::Int8, rows, col_idx);
+                fill_column!(arrow_column, Float64Array, Value::Double, rows, col_idx);
             }
             DataType::Utf8 | DataType::LargeUtf8 => {
                 fill_column!(arrow_column, StringArray, Value::String, rows, col_idx);

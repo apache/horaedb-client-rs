@@ -64,8 +64,8 @@ impl Builder {
             Arc::new(RpcClientImplFactory::new(self.grpc_config, self.rpc_opts));
 
         match self.mode {
-            Mode::Direct => Arc::new(RawImpl::new(rpc_client_factory, self.endpoint)),
-            Mode::Proxy => Arc::new(RouteBasedImpl::new(rpc_client_factory, self.endpoint)),
+            Mode::Direct => Arc::new(RouteBasedImpl::new(rpc_client_factory, self.endpoint)),
+            Mode::Proxy => Arc::new(RawImpl::new(rpc_client_factory, self.endpoint)),
         }
     }
 }
