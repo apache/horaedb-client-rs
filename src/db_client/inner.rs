@@ -1,14 +1,15 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Inner client
+
 use std::sync::Arc;
 
 use tokio::sync::OnceCell;
 
 use crate::{
     model::{
-        request::QueryRequest,
-        write::{WriteRequest, WriteResponse},
-        QueryResponse,
+        sql_query::{Request as SqlQueryRequest, Response as SqlQueryResponse},
+        write::{Request as WriteRequest, Response as WriteResponse},
     },
     rpc_client::{RpcClient, RpcClientFactory, RpcContext},
     Result,
@@ -37,18 +38,18 @@ impl<F: RpcClientFactory> InnerClient<F> {
         self.factory.build(self.endpoint.clone()).await
     }
 
-    pub async fn query_internal(
+    pub async fn sql_query_internal(
         &self,
         ctx: &RpcContext,
-        req: &QueryRequest,
-    ) -> Result<QueryResponse> {
+        req: &SqlQueryRequest,
+    ) -> Result<SqlQueryResponse> {
         let client_handle = self.inner_client.get_or_try_init(|| self.init()).await?;
 
         client_handle
             .as_ref()
-            .query(ctx, req.clone().into())
+            .sql_query(ctx, req.clone().into())
             .await
-            .and_then(QueryResponse::try_from)
+            .and_then(SqlQueryResponse::try_from)
     }
 
     pub async fn write_internal(

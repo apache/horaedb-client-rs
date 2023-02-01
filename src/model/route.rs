@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Model for route
+
 use std::{fmt::Display, str::FromStr};
 
 use ceresdbproto::storage::Endpoint as EndPointPb;

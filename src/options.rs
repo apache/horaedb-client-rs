@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Options in client
+
 use std::time::Duration;
 
 #[derive(Debug, Clone)]

@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! [Router] in client
+
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
@@ -13,12 +15,12 @@ use crate::{
     Error,
 };
 
-/// Used to route metrics to endpoints.
+/// Used to route tables to endpoints.
 #[async_trait]
 pub trait Router: Send + Sync {
-    async fn route(&self, metrics: &[String], ctx: &RpcContext) -> Result<Vec<Option<Endpoint>>>;
+    async fn route(&self, tables: &[String], ctx: &RpcContext) -> Result<Vec<Option<Endpoint>>>;
 
-    fn evict(&self, metrics: &[String]);
+    fn evict(&self, tables: &[String]);
 }
 
 /// Implementation for [`Router`].
@@ -47,20 +49,20 @@ impl RouterImpl {
 
 #[async_trait]
 impl Router for RouterImpl {
-    async fn route(&self, metrics: &[String], ctx: &RpcContext) -> Result<Vec<Option<Endpoint>>> {
-        let mut target_endpoints = vec![Some(self.default_endpoint.clone()); metrics.len()];
+    async fn route(&self, tables: &[String], ctx: &RpcContext) -> Result<Vec<Option<Endpoint>>> {
+        let mut target_endpoints = vec![Some(self.default_endpoint.clone()); tables.len()];
 
         // Find from cache firstly and collect misses.
         let misses = {
             let mut misses = HashMap::new();
-            for (idx, metric) in metrics.iter().enumerate() {
-                match self.cache.get(metric) {
+            for (idx, table) in tables.iter().enumerate() {
+                match self.cache.get(table) {
                     Some(pair) => {
                         target_endpoints[idx] = Some(pair.value().clone());
                     }
 
                     None => {
-                        misses.insert(metric.clone(), idx);
+                        misses.insert(table.clone(), idx);
                     }
                 }
             }
@@ -69,8 +71,8 @@ impl Router for RouterImpl {
 
         // Get endpoints of misses from remote.
         let mut req = RouteRequest::default();
-        let miss_metrics = misses.iter().map(|(m, _)| m.clone()).collect();
-        req.metrics = miss_metrics;
+        let miss_tables = misses.iter().map(|(m, _)| m.clone()).collect();
+        req.tables = miss_tables;
         let resp = self.rpc_client.route(ctx, req).await?;
 
         // Fill miss endpoint and update cache.
@@ -81,19 +83,19 @@ impl Router for RouterImpl {
             }
 
             // Impossible to get none.
-            let idx = misses.get(&route.metric).ok_or_else(|| {
-                Error::Unknown(format!("Unknown metric:{} in response", route.metric))
+            let idx = misses.get(&route.table).ok_or_else(|| {
+                Error::Unknown(format!("Unknown table:{} in response", route.table))
             })?;
             let endpoint: Endpoint = route.endpoint.unwrap().into();
-            self.cache.insert(route.metric, endpoint.clone());
+            self.cache.insert(route.table, endpoint.clone());
             target_endpoints[*idx] = Some(endpoint);
         }
 
         Ok(target_endpoints)
     }
 
-    fn evict(&self, metrics: &[String]) {
-        metrics.iter().for_each(|e| {
+    fn evict(&self, tables: &[String]) {
+        tables.iter().for_each(|e| {
             self.cache.remove(e.as_str());
         })
     }
@@ -114,10 +116,10 @@ mod test {
     #[tokio::test]
     async fn test_basic_flow() {
         // Init mock route table
-        let metric1 = "metric1".to_string();
-        let metric2 = "metric2".to_string();
-        let metric3 = "metric3".to_string();
-        let metric4 = "metric4".to_string();
+        let table1 = "table1".to_string();
+        let table2 = "table2".to_string();
+        let table3 = "table3".to_string();
+        let table4 = "table4".to_string();
         let endpoint1 = Endpoint::new("192.168.0.1".to_string(), 11);
         let endpoint2 = Endpoint::new("192.168.0.2".to_string(), 12);
         let endpoint3 = Endpoint::new("192.168.0.3".to_string(), 13);
@@ -131,34 +133,34 @@ mod test {
         };
         mock_rpc_client
             .route_table
-            .insert(metric1.clone(), endpoint1.clone());
+            .insert(table1.clone(), endpoint1.clone());
         mock_rpc_client
             .route_table
-            .insert(metric2.clone(), endpoint2.clone());
+            .insert(table2.clone(), endpoint2.clone());
 
         // Follow these steps to check wether cache is used or not:
         // route --> change route_table --> route again.
         let ctx = RpcContext::new("test".to_string(), "".to_string());
-        let metrics = vec![metric1.clone(), metric2.clone()];
+        let tables = vec![table1.clone(), table2.clone()];
         let route_client = RouterImpl::new(default_endpoint.clone(), Arc::new(mock_rpc_client));
-        let route_res1 = route_client.route(&metrics, &ctx).await.unwrap();
+        let route_res1 = route_client.route(&tables, &ctx).await.unwrap();
         assert_eq!(&endpoint1, route_res1.get(0).unwrap().as_ref().unwrap());
         assert_eq!(&endpoint2, route_res1.get(1).unwrap().as_ref().unwrap());
 
-        route_table.insert(metric1.clone(), endpoint3.clone());
-        route_table.insert(metric2.clone(), endpoint4.clone());
+        route_table.insert(table1.clone(), endpoint3.clone());
+        route_table.insert(table2.clone(), endpoint4.clone());
 
-        let route_res2 = route_client.route(&metrics, &ctx).await.unwrap();
+        let route_res2 = route_client.route(&tables, &ctx).await.unwrap();
         assert_eq!(&endpoint1, route_res2.get(0).unwrap().as_ref().unwrap());
         assert_eq!(&endpoint2, route_res2.get(1).unwrap().as_ref().unwrap());
 
-        route_client.evict(&[metric1.clone(), metric2.clone()]);
+        route_client.evict(&[table1.clone(), table2.clone()]);
 
-        let route_res3 = route_client.route(&metrics, &ctx).await.unwrap();
+        let route_res3 = route_client.route(&tables, &ctx).await.unwrap();
         assert_eq!(&endpoint3, route_res3.get(0).unwrap().as_ref().unwrap());
         assert_eq!(&endpoint4, route_res3.get(1).unwrap().as_ref().unwrap());
 
-        let route_res4 = route_client.route(&[metric3, metric4], &ctx).await.unwrap();
+        let route_res4 = route_client.route(&[table3, table4], &ctx).await.unwrap();
         assert_eq!(
             &default_endpoint,
             route_res4.get(0).unwrap().as_ref().unwrap()

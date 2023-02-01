@@ -1,13 +1,16 @@
+// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
+
+//! Rpc client impl
+
 use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use ceresdbproto::{
     common::ResponseHeader,
     storage::{
-        storage_service_client::StorageServiceClient, QueryRequest as QueryRequestPb,
-        QueryResponse as QueryResponsePb, RouteRequest as RouteRequestPb,
-        RouteResponse as RouteResponsePb, WriteRequest as WriteRequestPb,
-        WriteResponse as WriteResponsePb,
+        storage_service_client::StorageServiceClient, RouteRequest as RouteRequestPb,
+        RouteResponse as RouteResponsePb, SqlQueryRequest, SqlQueryResponse,
+        WriteRequest as WriteRequestPb, WriteResponse as WriteResponsePb,
     },
 };
 use tonic::{
@@ -72,13 +75,13 @@ impl RpcClientImpl {
 
 #[async_trait]
 impl RpcClient for RpcClientImpl {
-    async fn query(&self, ctx: &RpcContext, req: QueryRequestPb) -> Result<QueryResponsePb> {
+    async fn sql_query(&self, ctx: &RpcContext, req: SqlQueryRequest) -> Result<SqlQueryResponse> {
         let interceptor = AuthInterceptor::new(ctx)?;
         let mut client =
             StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
 
         let resp = client
-            .query(self.make_query_request(ctx, req))
+            .sql_query(self.make_query_request(ctx, req))
             .await
             .map_err(Error::Rpc)?;
         let mut resp = resp.into_inner();

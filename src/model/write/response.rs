@@ -5,20 +5,20 @@
 use ceresdbproto::storage::WriteResponse as WriteResponsePb;
 
 #[derive(Debug)]
-pub struct WriteResponse {
+pub struct Response {
     pub success: u32,
     pub failed: u32,
 }
 
-impl WriteResponse {
+impl Response {
     pub fn new(success: u32, failed: u32) -> Self {
         Self { success, failed }
     }
 }
 
-impl From<WriteResponsePb> for WriteResponse {
+impl From<WriteResponsePb> for Response {
     fn from(resp_pb: WriteResponsePb) -> Self {
-        WriteResponse {
+        Response {
             success: resp_pb.success,
             failed: resp_pb.failed,
         }

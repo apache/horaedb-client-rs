@@ -1,5 +1,7 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Client for cluster mode
+
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
@@ -7,14 +9,13 @@ use dashmap::DashMap;
 use futures::future::join_all;
 use tokio::sync::OnceCell;
 
-use super::{inner::InnerClient, DbClient};
 use crate::{
+    db_client::{inner::InnerClient, DbClient},
     errors::ClusterWriteError,
     model::{
-        request::QueryRequest,
         route::Endpoint,
-        write::{WriteRequest, WriteResponse},
-        QueryResponse,
+        sql_query::{Request as SqlQueryRequest, Response as SqlQueryResponse},
+        write::{Request as WriteRequest, Response as WriteResponse},
     },
     router::{Router, RouterImpl},
     rpc_client::{RpcClientFactory, RpcContext},
@@ -23,14 +24,14 @@ use crate::{
 };
 
 /// Client implementation for ceresdb while using cluster mode.
-pub struct ClusterImpl<F: RpcClientFactory> {
+pub struct RouteBasedImpl<F: RpcClientFactory> {
     factory: Arc<F>,
     router_endpoint: String,
     router: OnceCell<Box<dyn Router>>,
     standalone_pool: DirectClientPool<F>,
 }
 
-impl<F: RpcClientFactory> ClusterImpl<F> {
+impl<F: RpcClientFactory> RouteBasedImpl<F> {
     pub fn new(factory: Arc<F>, router_endpoint: String) -> Self {
         Self {
             factory: factory.clone(),
@@ -53,22 +54,22 @@ impl<F: RpcClientFactory> ClusterImpl<F> {
 }
 
 #[async_trait]
-impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
-    async fn query(&self, ctx: &RpcContext, req: &QueryRequest) -> Result<QueryResponse> {
-        if req.metrics.is_empty() {
+impl<F: RpcClientFactory> DbClient for RouteBasedImpl<F> {
+    async fn sql_query(&self, ctx: &RpcContext, req: &SqlQueryRequest) -> Result<SqlQueryResponse> {
+        if req.tables.is_empty() {
             return Err(Error::Unknown(
-                "Metrics in query request can't be empty in cluster mode".to_string(),
+                "tables in query request can't be empty in cluster mode".to_string(),
             ));
         }
         let router_handle = self.router.get_or_try_init(|| self.init_router()).await?;
 
-        let endpoint = match router_handle.route(&req.metrics, ctx).await {
+        let endpoint = match router_handle.route(&req.tables, ctx).await {
             Ok(mut eps) => {
                 if let Some(ep) = eps[0].take() {
                     ep
                 } else {
                     return Err(Error::Unknown(
-                        "Metric doesn't have corresponding endpoint".to_string(),
+                        "table doesn't have corresponding endpoint".to_string(),
                     ));
                 }
             }
@@ -79,15 +80,15 @@ impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
 
         let client = self.standalone_pool.get_or_create(&endpoint).clone();
 
-        client.query_internal(ctx, req).await.map_err(|e| {
-            router_handle.evict(&req.metrics);
+        client.sql_query_internal(ctx, req).await.map_err(|e| {
+            router_handle.evict(&req.tables);
             e
         })
     }
 
     async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResponse> {
-        // Get metrics' related endpoints(some may not exist).
-        let should_routes: Vec<_> = req.write_entries.iter().map(|(m, _)| m.clone()).collect();
+        // Get tables' related endpoints(some may not exist).
+        let should_routes: Vec<_> = req.point_groups.iter().map(|(m, _)| m.clone()).collect();
         let router_handle = self.router.get_or_try_init(|| self.init_router()).await?;
         let endpoints = router_handle.route(&should_routes, ctx).await?;
 
@@ -102,9 +103,9 @@ impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
                     let write_req = partition_by_endpoint
                         .entry(ep)
                         .or_insert_with(WriteRequest::default);
-                    write_req.write_entries.insert(
+                    write_req.point_groups.insert(
                         m.clone(),
-                        req.write_entries.get(m.as_str()).cloned().unwrap(),
+                        req.point_groups.get(m.as_str()).cloned().unwrap(),
                     );
                 }
                 None => {
@@ -113,13 +114,13 @@ impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
             });
 
         // Get client and send.
-        let mut write_metrics = vec![Vec::new(); partition_by_endpoint.len()];
+        let mut write_tables = vec![Vec::new(); partition_by_endpoint.len()];
         let client_req_paris: Vec<_> = partition_by_endpoint
             .into_iter()
             .enumerate()
             .map(|(idx, (ep, req))| {
-                assert!(idx < write_metrics.len());
-                write_metrics[idx].extend(req.write_entries.iter().map(|(m, _)| m.clone()));
+                assert!(idx < write_tables.len());
+                write_tables[idx].extend(req.point_groups.iter().map(|(m, _)| m.clone()));
                 (self.standalone_pool.get_or_create(&ep), req)
             })
             .collect();
@@ -129,18 +130,18 @@ impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
         }
 
         // Await rpc results and collect results.
-        let mut metrics_result_pairs: Vec<_> = join_all(futures)
+        let mut tables_result_pairs: Vec<_> = join_all(futures)
             .await
             .into_iter()
-            .zip(write_metrics.into_iter())
-            .map(|(results, metrics)| (metrics, results))
+            .zip(write_tables.into_iter())
+            .map(|(results, tables)| (tables, results))
             .collect();
 
         if !no_corresponding_endpoints.is_empty() {
-            metrics_result_pairs.push((
+            tables_result_pairs.push((
                 no_corresponding_endpoints,
                 Err(Error::Unknown(
-                    "Metrics don't have corresponding endpoints".to_string(),
+                    "tables don't have corresponding endpoints".to_string(),
                 )),
             ));
         }
@@ -148,12 +149,12 @@ impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
         // Process results:
         //  + Evict outdated endpoints.
         //  + Merge results and return.
-        let evicts: Vec<_> = metrics_result_pairs
+        let evicts: Vec<_> = tables_result_pairs
             .iter()
-            .filter_map(|(metrics, result)| {
+            .filter_map(|(tables, result)| {
                 if let Err(Error::Server(server_error)) = &result &&
                 should_refresh(server_error.code, &server_error.msg) {
-                Some(metrics.clone())
+                Some(tables.clone())
             } else {
                 None
             }
@@ -162,7 +163,7 @@ impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
             .collect();
         router_handle.evict(&evicts);
 
-        let cluster_error: ClusterWriteError = metrics_result_pairs.into();
+        let cluster_error: ClusterWriteError = tables_result_pairs.into();
         if cluster_error.all_ok() {
             Ok(cluster_error.ok.1)
         } else {

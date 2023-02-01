@@ -1,17 +1,25 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
+//! Client builder
+
 use std::sync::Arc;
 
 use crate::{
-    db_client::{cluster::ClusterImpl, standalone::StandaloneImpl, DbClient},
+    db_client::{raw::RawImpl, route_based::RouteBasedImpl, DbClient},
     rpc_client::RpcClientImplFactory,
     RpcConfig, RpcOptions,
 };
 
+/// Client mode
+///
+/// + In `Direct` mode, request will be sent to corresponding endpoint
+/// directly(maybe need to get the target endpoint by route request first).
+/// + In `Proxy` mode, request will be sent to proxy server responsible for
+/// forwarding the request.
 #[derive(Debug, Clone)]
 pub enum Mode {
-    Standalone,
-    Cluster,
+    Direct,
+    Proxy,
 }
 
 /// Client builder, has standalone mode and cluster mode.
@@ -29,6 +37,7 @@ pub struct Builder {
 }
 
 impl Builder {
+    // We hide this detail new method for the convenience of users.
     pub fn new(endpoint: String, mode: Mode) -> Self {
         Self {
             mode,
@@ -55,9 +64,8 @@ impl Builder {
             Arc::new(RpcClientImplFactory::new(self.grpc_config, self.rpc_opts));
 
         match self.mode {
-            Mode::Standalone => Arc::new(StandaloneImpl::new(rpc_client_factory, self.endpoint)),
-
-            Mode::Cluster => Arc::new(ClusterImpl::new(rpc_client_factory, self.endpoint)),
+            Mode::Direct => Arc::new(RawImpl::new(rpc_client_factory, self.endpoint)),
+            Mode::Proxy => Arc::new(RouteBasedImpl::new(rpc_client_factory, self.endpoint)),
         }
     }
 }

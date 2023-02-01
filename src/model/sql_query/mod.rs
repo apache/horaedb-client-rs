@@ -1,10 +1,11 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-//! Model for write
+//! Model for sql query
 
-pub mod point;
-mod request;
-mod response;
+pub mod display;
+pub(crate) mod request;
+pub(crate) mod response;
+pub mod row;
 
 pub use request::Request;
 pub use response::Response;

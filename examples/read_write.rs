@@ -4,7 +4,11 @@ use std::sync::Arc;
 
 use ceresdb_client_rs::{
     db_client::{Builder, DbClient, Mode},
-    model::{request::QueryRequest, value::Value, write::WriteRequestBuilder},
+    model::{
+        sql_query::{display::CsvFormatter, Request as SqlQueryRequest},
+        value::Value,
+        write::{point::PointGroupBuilder, Request as WriteRequest},
+    },
     RpcConfig, RpcContext,
 };
 use chrono::Local;
@@ -18,13 +22,14 @@ async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
                 int_field int32,
                 bin_field varbinary,
                 t timestamp NOT NULL,
-                TIMESTAMP KEY(t)) ENGINE=Analytic with (enable_ttl='false')"#;
-    let req = QueryRequest {
-        metrics: vec!["ceresdb".to_string()],
-        ql: create_table_sql.to_string(),
+                TIMESTAMP KEY(t)) ENGINE=Analytic with
+(enable_ttl='false')"#;
+    let req = SqlQueryRequest {
+        tables: vec!["ceresdb".to_string()],
+        sql: create_table_sql.to_string(),
     };
     let resp = client
-        .query(rpc_ctx, &req)
+        .sql_query(rpc_ctx, &req)
         .await
         .expect("Should succeed to create table");
     println!("Create table result:{:?}", resp);
@@ -32,21 +37,24 @@ async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 
 async fn drop_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let drop_table_sql = "DROP TABLE ceresdb";
-    let req = QueryRequest {
-        metrics: vec!["ceresdb".to_string()],
-        ql: drop_table_sql.to_string(),
+    let req = SqlQueryRequest {
+        tables: vec!["ceresdb".to_string()],
+        sql: drop_table_sql.to_string(),
     };
-    let _resp = client.query(rpc_ctx, &req).await;
+    let _resp = client
+        .sql_query(rpc_ctx, &req)
+        .await
+        .expect("Should succeed to drop table");
     println!("Drop table success!");
 }
 
 async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let ts1 = Local::now().timestamp_millis();
-    let mut write_req_builder = WriteRequestBuilder::default();
-    // first row
-    write_req_builder
-        .row_builder()
-        .metric("ceresdb".to_string())
+    let mut write_req = WriteRequest::default();
+    let point_group_builder = PointGroupBuilder::new("ceresdb".to_string());
+
+    let point_group = point_group_builder
+        .add_point()
         .timestamp(ts1)
         .tag("str_tag".to_string(), Value::String("tag_val1".to_string()))
         .tag("int_tag".to_string(), Value::Int32(42))
@@ -64,12 +72,8 @@ async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
             Value::Varbinary(b"field_bin_val1".to_vec()),
         )
         .finish()
-        .unwrap();
-
-    // second row
-    write_req_builder
-        .row_builder()
-        .metric("ceresdb".to_string())
+        .unwrap()
+        .add_point()
         .timestamp(ts1 + 40)
         .tag("str_tag".to_string(), Value::String("tag_val2".to_string()))
         .tag("int_tag".to_string(), Value::Int32(43))
@@ -86,36 +90,32 @@ async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
             Value::Varbinary(b"field_bin_val2".to_vec()),
         )
         .finish()
-        .unwrap();
+        .unwrap()
+        .build();
 
-    let write_req = write_req_builder.build();
-    let res = client.write(rpc_ctx, &write_req).await;
+    write_req.add_point_group(point_group);
+
+    let res = client
+        .write(rpc_ctx, &write_req)
+        .await
+        .expect("Should success to write");
     println!("{:?}", res);
 }
 
-async fn query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
-    let req = QueryRequest {
-        metrics: vec!["ceresdb".to_string()],
-        ql: "select * from ceresdb;".to_string(),
+async fn sql_query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
+    let req = SqlQueryRequest {
+        tables: vec!["ceresdb".to_string()],
+        sql: "select * from ceresdb;".to_string(),
     };
-    let resp = client.query(rpc_ctx, &req).await.unwrap();
-    println!("Rows in the resp:{:?}", resp);
-
-    for (row_id, row) in resp.rows.iter().enumerate() {
-        let format_row: Vec<_> = row
-            .datums
-            .iter()
-            .zip(resp.schema.column_schemas.iter())
-            .map(|(datum, col_schema)| format!("{:?}:{:?}", col_schema.name, datum))
-            .collect();
-        println!("row{}:{:?}", row_id, format_row);
-    }
+    let resp = client.sql_query(rpc_ctx, &req).await.unwrap();
+    let csv_formatter = CsvFormatter { resp };
+    println!("Rows in the resp:\n{}", csv_formatter);
 }
 
 #[tokio::main]
 async fn main() {
     // you should ensure ceresdb is running, and grpc port is set to 8831
-    let client = Builder::new("127.0.0.1:8831".to_string(), Mode::Standalone)
+    let client = Builder::new("127.0.0.1:8831".to_string(), Mode::Direct)
         .grpc_config(RpcConfig::default())
         .build();
     let rpc_ctx = RpcContext::new("public".to_string(), "".to_string());
@@ -130,7 +130,7 @@ async fn main() {
     println!("------------------------------------------------------------------");
 
     println!("### read:");
-    query(&client, &rpc_ctx).await;
+    sql_query(&client, &rpc_ctx).await;
     println!("------------------------------------------------------------------");
 
     println!("### drop table:");
