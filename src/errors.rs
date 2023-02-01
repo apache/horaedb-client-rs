@@ -40,8 +40,8 @@ pub enum Error {
 
     /// Error from write in cluster mode, some of rows may be written
     /// successfully, and others may fail.
-    #[error("failed in cluster write, err:{0}")]
-    ClusterWriteError(ClusterWriteError),
+    #[error("failed to write with route based client, err:{0}")]
+    RouteBasedWriteError(RouteBasedWriteError),
 
     /// Error unknown
     #[error("unknown error, msg:{0}")]
@@ -55,12 +55,12 @@ pub enum Error {
 }
 
 #[derive(Debug)]
-pub struct ClusterWriteError {
+pub struct RouteBasedWriteError {
     pub ok: (Vec<String>, Response),       // (tables, write_response)
     pub errors: Vec<(Vec<String>, Error)>, // [(tables, erros)]
 }
 
-impl From<Vec<(Vec<String>, Result<Response>)>> for ClusterWriteError {
+impl From<Vec<(Vec<String>, Result<Response>)>> for RouteBasedWriteError {
     fn from(wirte_results: Vec<(Vec<String>, Result<Response>)>) -> Self {
         let mut success_total = 0;
         let mut failed_total = 0;
@@ -86,13 +86,13 @@ impl From<Vec<(Vec<String>, Result<Response>)>> for ClusterWriteError {
     }
 }
 
-impl ClusterWriteError {
+impl RouteBasedWriteError {
     pub fn all_ok(&self) -> bool {
         self.errors.is_empty()
     }
 }
 
-impl Display for ClusterWriteError {
+impl Display for RouteBasedWriteError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ClusterWriteError")
             .field("ok", &self.ok)

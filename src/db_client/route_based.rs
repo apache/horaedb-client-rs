@@ -11,7 +11,7 @@ use tokio::sync::OnceCell;
 
 use crate::{
     db_client::{inner::InnerClient, DbClient},
-    errors::ClusterWriteError,
+    errors::RouteBasedWriteError,
     model::{
         route::Endpoint,
         sql_query::{Request as SqlQueryRequest, Response as SqlQueryResponse},
@@ -163,11 +163,11 @@ impl<F: RpcClientFactory> DbClient for RouteBasedImpl<F> {
             .collect();
         router_handle.evict(&evicts);
 
-        let cluster_error: ClusterWriteError = tables_result_pairs.into();
+        let cluster_error: RouteBasedWriteError = tables_result_pairs.into();
         if cluster_error.all_ok() {
             Ok(cluster_error.ok.1)
         } else {
-            Err(Error::ClusterWriteError(cluster_error))
+            Err(Error::RouteBasedWriteError(cluster_error))
         }
     }
 }
