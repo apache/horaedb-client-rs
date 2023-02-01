@@ -9,8 +9,8 @@ use dashmap::DashMap;
 use futures::future::join_all;
 use tokio::sync::OnceCell;
 
-use super::{inner::InnerClient, DbClient};
 use crate::{
+    db_client::{inner::InnerClient, DbClient},
     errors::ClusterWriteError,
     model::{
         route::Endpoint,
@@ -24,14 +24,14 @@ use crate::{
 };
 
 /// Client implementation for ceresdb while using cluster mode.
-pub struct ClusterImpl<F: RpcClientFactory> {
+pub struct RouteBasedImpl<F: RpcClientFactory> {
     factory: Arc<F>,
     router_endpoint: String,
     router: OnceCell<Box<dyn Router>>,
     standalone_pool: DirectClientPool<F>,
 }
 
-impl<F: RpcClientFactory> ClusterImpl<F> {
+impl<F: RpcClientFactory> RouteBasedImpl<F> {
     pub fn new(factory: Arc<F>, router_endpoint: String) -> Self {
         Self {
             factory: factory.clone(),
@@ -54,7 +54,7 @@ impl<F: RpcClientFactory> ClusterImpl<F> {
 }
 
 #[async_trait]
-impl<F: RpcClientFactory> DbClient for ClusterImpl<F> {
+impl<F: RpcClientFactory> DbClient for RouteBasedImpl<F> {
     async fn sql_query(&self, ctx: &RpcContext, req: &SqlQueryRequest) -> Result<SqlQueryResponse> {
         if req.tables.is_empty() {
             return Err(Error::Unknown(

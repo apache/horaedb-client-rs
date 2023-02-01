@@ -2,8 +2,6 @@
 
 // [Row] in sql query
 
-use std::collections::BTreeMap;
-
 use arrow::{
     array::{
         ArrayRef, BinaryArray, BooleanArray, Int16Array, Int32Array, Int64Array, Int8Array,
@@ -20,16 +18,28 @@ use crate::{model::value::Value, Error, Result};
 #[derive(Debug, PartialEq)]
 pub struct Row {
     // It is better to iterate in a fixed order, also can save memory.
-    values: BTreeMap<String, Value>,
+    columns: Vec<Column>,
 }
 
 impl Row {
-    pub fn column_value(&self, name: &str) -> Option<&Value> {
-        self.values.get(name)
+    pub fn column(&self, name: &str) -> Option<&Column> {
+        self.columns.iter().find(|column| column.name == name)
     }
 
-    pub fn column_names(&self) -> Vec<String> {
-        self.values.iter().map(|(name, _)| name.clone()).collect()
+    pub fn columns(&self) -> &[Column] {
+        &self.columns
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Column {
+    pub name: String,
+    pub value: Value,
+}
+
+impl Column {
+    pub(crate) fn new(name: String, value: Value) -> Self {
+        Self { name, value }
     }
 }
 
@@ -61,19 +71,18 @@ impl RowBuilder {
         self.row_values
             .into_iter()
             .map(|row| {
-                let row_value_with_names = row
+                let columns = row
                     .into_iter()
                     .enumerate()
                     .map(|(col_idx, value)| {
                         // Find its name.
                         let col_name = self.col_idx_to_name[col_idx].clone();
-                        (col_name, value)
-                    })
-                    .collect::<BTreeMap<String, Value>>();
 
-                Row {
-                    values: row_value_with_names,
-                }
+                        Column::new(col_name, value)
+                    })
+                    .collect::<Vec<Column>>();
+
+                Row { columns }
             })
             .collect::<Vec<_>>()
     }
@@ -180,7 +189,7 @@ impl RowBuilder {
             // Encounter unsupported type.
             _ => {
                 return Err(Error::BuildRows(format!(
-                    "found unsupported arrow ty:{}",
+                    "Unsupported arrow type:{}",
                     arrow_type
                 )));
             }
@@ -191,7 +200,7 @@ impl RowBuilder {
 
 #[cfg(test)]
 mod test {
-    use std::{collections::BTreeMap, sync::Arc};
+    use std::sync::Arc;
 
     use arrow::{
         array::{
@@ -202,7 +211,7 @@ mod test {
     };
 
     use super::{Row, RowBuilder};
-    use crate::model::value::Value;
+    use crate::model::{sql_query::row::Column, value::Value};
 
     #[test]
     fn test_build_row() {
@@ -271,31 +280,31 @@ mod test {
             .map(|v| Value::Timestamp(v as i64))
             .collect::<Vec<_>>();
         let row1 = Row {
-            values: BTreeMap::from([
-                ("int".to_string(), int_col_values[0].clone()),
-                ("string".to_string(), string_col_values[0].clone()),
-                ("varbinary".to_string(), binary_col_values[0].clone()),
-                ("timestamp".to_string(), timestamp_col_values[0].clone()),
-                ("timestamp32".to_string(), timestamp32_col_values[0].clone()),
-            ]),
+            columns: vec![
+                Column::new("int".to_string(), int_col_values[0].clone()),
+                Column::new("string".to_string(), string_col_values[0].clone()),
+                Column::new("varbinary".to_string(), binary_col_values[0].clone()),
+                Column::new("timestamp".to_string(), timestamp_col_values[0].clone()),
+                Column::new("timestamp32".to_string(), timestamp32_col_values[0].clone()),
+            ],
         };
         let row2 = Row {
-            values: BTreeMap::from([
-                ("int".to_string(), int_col_values[1].clone()),
-                ("string".to_string(), string_col_values[1].clone()),
-                ("varbinary".to_string(), binary_col_values[1].clone()),
-                ("timestamp".to_string(), timestamp_col_values[1].clone()),
-                ("timestamp32".to_string(), timestamp32_col_values[1].clone()),
-            ]),
+            columns: vec![
+                Column::new("int".to_string(), int_col_values[1].clone()),
+                Column::new("string".to_string(), string_col_values[1].clone()),
+                Column::new("varbinary".to_string(), binary_col_values[1].clone()),
+                Column::new("timestamp".to_string(), timestamp_col_values[1].clone()),
+                Column::new("timestamp32".to_string(), timestamp32_col_values[1].clone()),
+            ],
         };
         let row3 = Row {
-            values: BTreeMap::from([
-                ("int".to_string(), int_col_values[2].clone()),
-                ("string".to_string(), string_col_values[2].clone()),
-                ("varbinary".to_string(), binary_col_values[2].clone()),
-                ("timestamp".to_string(), timestamp_col_values[2].clone()),
-                ("timestamp32".to_string(), timestamp32_col_values[2].clone()),
-            ]),
+            columns: vec![
+                Column::new("int".to_string(), int_col_values[2].clone()),
+                Column::new("string".to_string(), string_col_values[2].clone()),
+                Column::new("varbinary".to_string(), binary_col_values[2].clone()),
+                Column::new("timestamp".to_string(), timestamp_col_values[2].clone()),
+                Column::new("timestamp32".to_string(), timestamp32_col_values[2].clone()),
+            ],
         };
         let expected_rows = vec![row1, row2, row3];
 

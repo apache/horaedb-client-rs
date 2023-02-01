@@ -6,9 +6,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use super::inner::InnerClient;
 use crate::{
-    db_client::DbClient,
+    db_client::{inner::InnerClient, DbClient},
     model::{
         sql_query::{Request as SqlQueryRequest, Response as SqlQueryResponse},
         write::{Request as WriteRequest, Response as WriteResponse},
@@ -19,12 +18,12 @@ use crate::{
 
 /// Client for ceresdb of standalone mode.
 ///
-/// Now, [`StandaloneImpl`] just wraps [`InnerClient`] simply.
-pub struct StandaloneImpl<F: RpcClientFactory> {
+/// Now, [`RawImpl`] just wraps [`InnerClient`] simply.
+pub struct RawImpl<F: RpcClientFactory> {
     inner_client: InnerClient<F>,
 }
 
-impl<F: RpcClientFactory> StandaloneImpl<F> {
+impl<F: RpcClientFactory> RawImpl<F> {
     pub fn new(factory: Arc<F>, endpoint: String) -> Self {
         Self {
             inner_client: InnerClient::new(factory, endpoint),
@@ -33,7 +32,7 @@ impl<F: RpcClientFactory> StandaloneImpl<F> {
 }
 
 #[async_trait]
-impl<F: RpcClientFactory> DbClient for StandaloneImpl<F> {
+impl<F: RpcClientFactory> DbClient for RawImpl<F> {
     async fn sql_query(&self, ctx: &RpcContext, req: &SqlQueryRequest) -> Result<SqlQueryResponse> {
         self.inner_client.sql_query_internal(ctx, req).await
     }

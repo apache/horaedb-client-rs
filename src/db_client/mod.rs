@@ -3,12 +3,12 @@
 //! Client interface
 
 mod builder;
-mod cluster;
 mod inner;
-mod standalone;
+mod raw;
+mod route_based;
 
 use async_trait::async_trait;
-pub use builder::Builder;
+pub use builder::{Builder, Mode};
 
 use crate::{
     model::{

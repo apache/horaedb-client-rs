@@ -10,8 +10,10 @@ use ceresdbproto::storage::{
     SqlQueryResponse,
 };
 
-use super::row::{Row, RowBuilder};
-use crate::errors::{Error, Result};
+use crate::{
+    errors::{Error, Result},
+    model::sql_query::row::{Row, RowBuilder},
+};
 
 #[derive(Debug)]
 pub struct Response {

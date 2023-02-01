@@ -17,7 +17,11 @@ impl Display for CsvFormatter {
         if !self.resp.rows.is_empty() {
             // Get and output column names, unwrap is safe here.
             let first_row = self.resp.rows.first().unwrap();
-            let col_names = first_row.column_names();
+            let col_names = first_row
+                .columns()
+                .iter()
+                .map(|col| col.name.clone())
+                .collect::<Vec<_>>();
             for col_name in &col_names {
                 f.write_fmt(format_args!("{},", col_name))?;
             }
@@ -25,9 +29,8 @@ impl Display for CsvFormatter {
 
             // Get and output rows.
             for row in &self.resp.rows {
-                for col_name in &col_names {
-                    let value = row.column_value(col_name).unwrap();
-                    f.write_fmt(format_args!("{:?},", value))?;
+                for column in row.columns() {
+                    f.write_fmt(format_args!("{:?},", column.value))?;
                 }
                 f.write_str("\n")?;
             }

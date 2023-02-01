@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use ceresdb_client_rs::{
-    db_client::{Builder, DbClient},
+    db_client::{Builder, DbClient, Mode},
     model::{
         sql_query::{display::CsvFormatter, Request as SqlQueryRequest},
         value::Value,
@@ -115,7 +115,7 @@ async fn sql_query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 #[tokio::main]
 async fn main() {
     // you should ensure ceresdb is running, and grpc port is set to 8831
-    let client = Builder::new("127.0.0.1:8831".to_string())
+    let client = Builder::new("127.0.0.1:8831".to_string(), Mode::Direct)
         .grpc_config(RpcConfig::default())
         .build();
     let rpc_ctx = RpcContext::new("public".to_string(), "".to_string());

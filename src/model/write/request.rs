@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use ceresdbproto::storage::WriteRequest as WriteRequestPb;
 use pb_builder::RequestPbBuilder;
 
-use super::point::{Point, PointGroup};
+use crate::model::write::point::{Point, PointGroup};
 
 /// Write request
 #[derive(Clone, Debug, Default)]
@@ -42,10 +42,9 @@ mod pb_builder {
         WriteSeriesEntry as WriteSeriesEntryPb, WriteTableRequest as WriteTableRequestPb,
     };
 
-    use super::Request;
     use crate::model::{
         value::{TimestampMs, Value},
-        write::point::Point,
+        write::{point::Point, Request},
     };
 
     type TagsKey = Vec<u8>;
