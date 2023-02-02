@@ -22,7 +22,7 @@ pub enum Mode {
     Proxy,
 }
 
-/// Client builder, has standalone mode and cluster mode.
+/// Client builder, has standalone mode and route based mode.
 ///
 /// You should define the mode in [`new`],
 /// and it cannot be changed after.

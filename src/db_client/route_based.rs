@@ -1,6 +1,6 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-//! Client for cluster mode
+//! Client for route based mode
 
 use std::{collections::HashMap, sync::Arc};
 
@@ -23,7 +23,7 @@ use crate::{
     Error, Result,
 };
 
-/// Client implementation for ceresdb while using cluster mode.
+/// Client implementation for ceresdb while using route based mode.
 pub struct RouteBasedImpl<F: RpcClientFactory> {
     factory: Arc<F>,
     router_endpoint: String,
@@ -58,7 +58,7 @@ impl<F: RpcClientFactory> DbClient for RouteBasedImpl<F> {
     async fn sql_query(&self, ctx: &RpcContext, req: &SqlQueryRequest) -> Result<SqlQueryResponse> {
         if req.tables.is_empty() {
             return Err(Error::Unknown(
-                "tables in query request can't be empty in cluster mode".to_string(),
+                "tables in query request can't be empty in route based mode".to_string(),
             ));
         }
         let router_handle = self.router.get_or_try_init(|| self.init_router()).await?;
@@ -163,11 +163,11 @@ impl<F: RpcClientFactory> DbClient for RouteBasedImpl<F> {
             .collect();
         router_handle.evict(&evicts);
 
-        let cluster_error: RouteBasedWriteError = tables_result_pairs.into();
-        if cluster_error.all_ok() {
-            Ok(cluster_error.ok.1)
+        let route_based_error: RouteBasedWriteError = tables_result_pairs.into();
+        if route_based_error.all_ok() {
+            Ok(route_based_error.ok.1)
         } else {
-            Err(Error::RouteBasedWriteError(cluster_error))
+            Err(Error::RouteBasedWriteError(route_based_error))
         }
     }
 }
