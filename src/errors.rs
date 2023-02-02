@@ -38,7 +38,7 @@ pub enum Error {
     #[error("failed to check auth, err:{0}")]
     AuthFail(AuthFailStatus),
 
-    /// Error from write in cluster mode, some of rows may be written
+    /// Error from write in route based mode, some of rows may be written
     /// successfully, and others may fail.
     #[error("failed to write with route based client, err:{0}")]
     RouteBasedWriteError(RouteBasedWriteError),
@@ -94,7 +94,7 @@ impl RouteBasedWriteError {
 
 impl Display for RouteBasedWriteError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ClusterWriteError")
+        f.debug_struct("RouteBasedWriteError")
             .field("ok", &self.ok)
             .field("errors", &self.errors)
             .finish()

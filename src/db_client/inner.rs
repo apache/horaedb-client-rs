@@ -15,7 +15,7 @@ use crate::{
     Result,
 };
 
-/// Inner client for both standalone and cluster modes.
+/// Inner client for both standalone and route based modes.
 ///
 /// Now, [`InnerClient`] just wraps [`RpcClient`] simply.
 pub(crate) struct InnerClient<F: RpcClientFactory> {
