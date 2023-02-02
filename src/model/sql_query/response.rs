@@ -15,24 +15,15 @@ use crate::{
     model::sql_query::row::{Row, RowBuilder},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Response {
-    pub affected_rows: i32,
+    pub affected_rows: u32,
     pub rows: Vec<Row>,
-}
-
-impl Default for Response {
-    fn default() -> Self {
-        Self {
-            affected_rows: -1,
-            rows: Vec::default(),
-        }
-    }
 }
 
 #[derive(Debug)]
 enum Output {
-    AffectedRows(i32),
+    AffectedRows(u32),
     Rows(Vec<Row>),
 }
 
@@ -65,7 +56,7 @@ impl TryFrom<OutputPb> for Output {
 
     fn try_from(output_pb: OutputPb) -> std::result::Result<Self, Self::Error> {
         let output = match output_pb {
-            OutputPb::AffectedRows(affected) => Output::AffectedRows(affected as i32),
+            OutputPb::AffectedRows(affected) => Output::AffectedRows(affected),
             OutputPb::Arrow(arrow_payload) => {
                 let arrow_record_batches = decode_arrow_payload(arrow_payload)?;
                 let rows_group = arrow_record_batches
