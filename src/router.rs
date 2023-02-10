@@ -5,7 +5,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
-use ceresdbproto::storage::RouteRequest;
+use ceresdbproto::storage::{self, RouteRequest};
 use dashmap::DashMap;
 
 use crate::{
@@ -50,6 +50,8 @@ impl RouterImpl {
 #[async_trait]
 impl Router for RouterImpl {
     async fn route(&self, tables: &[String], ctx: &RpcContext) -> Result<Vec<Option<Endpoint>>> {
+        assert!(ctx.database.is_some());
+
         let mut target_endpoints = vec![Some(self.default_endpoint.clone()); tables.len()];
 
         // Find from cache firstly and collect misses.
@@ -70,9 +72,14 @@ impl Router for RouterImpl {
         };
 
         // Get endpoints of misses from remote.
-        let mut req = RouteRequest::default();
+        let req_ctx = storage::RequestContext {
+            database: ctx.database.clone().unwrap(),
+        };
         let miss_tables = misses.iter().map(|(m, _)| m.clone()).collect();
-        req.tables = miss_tables;
+        let req = RouteRequest {
+            context: Some(req_ctx),
+            tables: miss_tables,
+        };
         let resp = self.rpc_client.route(ctx, req).await?;
 
         // Fill miss endpoint and update cache.
@@ -140,7 +147,10 @@ mod test {
 
         // Follow these steps to check wether cache is used or not:
         // route --> change route_table --> route again.
-        let ctx = RpcContext::default();
+        let ctx = RpcContext {
+            database: Some("db".to_string()),
+            timeout: None,
+        };
         let tables = vec![table1.clone(), table2.clone()];
         let route_client = RouterImpl::new(default_endpoint.clone(), Arc::new(mock_rpc_client));
         let route_res1 = route_client.route(&tables, &ctx).await.unwrap();
