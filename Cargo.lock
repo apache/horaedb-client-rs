@@ -213,7 +213,7 @@ dependencies = [
 [[package]]
 name = "ceresdbproto"
 version = "0.1.0"
-source = "git+https://github.com/CeresDB/ceresdbproto.git?rev=55495dd395d12a1f97f6c98e355290671d107c44#55495dd395d12a1f97f6c98e355290671d107c44"
+source = "git+https://github.com/CeresDB/ceresdbproto.git?rev=43939799b2e65e3fc5795118fc77593f7c4b19d7#43939799b2e65e3fc5795118fc77593f7c4b19d7"
 dependencies = [
  "prost",
  "protoc-bin-vendored",

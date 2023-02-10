@@ -14,14 +14,12 @@ use ceresdbproto::{
     },
 };
 use tonic::{
-    metadata::{Ascii, MetadataValue},
-    service::Interceptor,
     transport::{Channel, Endpoint},
-    Request, Status,
+    Request,
 };
 
 use crate::{
-    errors::{AuthCode, AuthFailStatus, Error, Result, ServerError},
+    errors::{Error, Result, ServerError},
     options::{RpcConfig, RpcOptions},
     rpc_client::{RpcClient, RpcClientFactory, RpcContext},
     util::is_ok,
@@ -76,9 +74,7 @@ impl RpcClientImpl {
 #[async_trait]
 impl RpcClient for RpcClientImpl {
     async fn sql_query(&self, ctx: &RpcContext, req: SqlQueryRequest) -> Result<SqlQueryResponse> {
-        let interceptor = AuthInterceptor::new(ctx)?;
-        let mut client =
-            StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
+        let mut client = StorageServiceClient::<Channel>::new(self.channel.clone());
 
         let resp = client
             .sql_query(self.make_query_request(ctx, req))
@@ -94,9 +90,7 @@ impl RpcClient for RpcClientImpl {
     }
 
     async fn write(&self, ctx: &RpcContext, req: WriteRequestPb) -> Result<WriteResponsePb> {
-        let interceptor = AuthInterceptor::new(ctx)?;
-        let mut client =
-            StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
+        let mut client = StorageServiceClient::<Channel>::new(self.channel.clone());
 
         let resp = client
             .write(self.make_write_request(ctx, req))
@@ -112,9 +106,7 @@ impl RpcClient for RpcClientImpl {
     }
 
     async fn route(&self, ctx: &RpcContext, req: RouteRequestPb) -> Result<RouteResponsePb> {
-        let interceptor = AuthInterceptor::new(ctx)?;
-        let mut client =
-            StorageServiceClient::<Channel>::with_interceptor(self.channel.clone(), interceptor);
+        let mut client = StorageServiceClient::<Channel>::new(self.channel.clone());
 
         // use the write timeout for the route request.
         let route_req = Self::make_request(ctx, req, self.default_write_timeout);
@@ -126,52 +118,6 @@ impl RpcClient for RpcClientImpl {
         }
 
         Ok(resp)
-    }
-}
-
-const RPC_HEADER_TENANT_KEY: &str = "x-ceresdb-access-tenant";
-
-/// AuthInterceptor is implemented as an interceptor for tonic.
-/// Its duty is to check user authentication.
-pub struct AuthInterceptor {
-    tenant: MetadataValue<Ascii>,
-    _token: MetadataValue<Ascii>,
-}
-
-impl AuthInterceptor {
-    fn new(ctx: &RpcContext) -> std::result::Result<Self, Error> {
-        Ok(AuthInterceptor {
-            tenant: ctx.tenant.parse().map_err(|_e| {
-                Error::AuthFail(AuthFailStatus {
-                    code: AuthCode::InvalidTenantMeta,
-                    msg: format!(
-                        "invalid tenant: {}, can not be converted to grpc metadata",
-                        ctx.tenant
-                    ),
-                })
-            })?,
-            _token: ctx.token.parse().map_err(|_e| {
-                Error::AuthFail(AuthFailStatus {
-                    code: AuthCode::InvalidTokenMeta,
-                    msg: format!(
-                        "invalid token: {}, can not be converted to grpc metadata",
-                        ctx.token
-                    ),
-                })
-            })?,
-        })
-    }
-}
-
-impl Interceptor for AuthInterceptor {
-    fn call(
-        &mut self,
-        mut request: tonic::Request<()>,
-    ) -> std::result::Result<tonic::Request<()>, Status> {
-        request
-            .metadata_mut()
-            .insert(RPC_HEADER_TENANT_KEY, self.tenant.clone());
-        Ok(request)
     }
 }
 

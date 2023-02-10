@@ -118,7 +118,7 @@ async fn main() {
     let client = Builder::new("127.0.0.1:8831".to_string(), Mode::Direct)
         .grpc_config(RpcConfig::default())
         .build();
-    let rpc_ctx = RpcContext::new("public".to_string(), "".to_string());
+    let rpc_ctx = RpcContext::default().database("public".to_string());
 
     println!("------------------------------------------------------------------");
     println!("### create table:");

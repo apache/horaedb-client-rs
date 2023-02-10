@@ -29,15 +29,17 @@ pub struct RouteBasedImpl<F: RpcClientFactory> {
     router_endpoint: String,
     router: OnceCell<Box<dyn Router>>,
     standalone_pool: DirectClientPool<F>,
+    default_database: Option<String>,
 }
 
 impl<F: RpcClientFactory> RouteBasedImpl<F> {
-    pub fn new(factory: Arc<F>, router_endpoint: String) -> Self {
+    pub fn new(factory: Arc<F>, router_endpoint: String, default_database: Option<String>) -> Self {
         Self {
             factory: factory.clone(),
             router_endpoint,
             router: OnceCell::new(),
             standalone_pool: DirectClientPool::new(factory),
+            default_database,
         }
     }
 
@@ -61,9 +63,11 @@ impl<F: RpcClientFactory> DbClient for RouteBasedImpl<F> {
                 "tables in query request can't be empty in route based mode".to_string(),
             ));
         }
+        let ctx = crate::db_client::resolve_database(ctx, &self.default_database)?;
+
         let router_handle = self.router.get_or_try_init(|| self.init_router()).await?;
 
-        let endpoint = match router_handle.route(&req.tables, ctx).await {
+        let endpoint = match router_handle.route(&req.tables, &ctx).await {
             Ok(mut eps) => {
                 if let Some(ep) = eps[0].take() {
                     ep
@@ -80,17 +84,19 @@ impl<F: RpcClientFactory> DbClient for RouteBasedImpl<F> {
 
         let client = self.standalone_pool.get_or_create(&endpoint).clone();
 
-        client.sql_query_internal(ctx, req).await.map_err(|e| {
+        client.sql_query_internal(&ctx, req).await.map_err(|e| {
             router_handle.evict(&req.tables);
             e
         })
     }
 
     async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResponse> {
+        let ctx = crate::db_client::resolve_database(ctx, &self.default_database)?;
+
         // Get tables' related endpoints(some may not exist).
         let should_routes: Vec<_> = req.point_groups.iter().map(|(m, _)| m.clone()).collect();
         let router_handle = self.router.get_or_try_init(|| self.init_router()).await?;
-        let endpoints = router_handle.route(&should_routes, ctx).await?;
+        let endpoints = router_handle.route(&should_routes, &ctx).await?;
 
         // Partition write entries in request according to related endpoints.
         let mut no_corresponding_endpoints = Vec::new();
@@ -126,7 +132,8 @@ impl<F: RpcClientFactory> DbClient for RouteBasedImpl<F> {
             .collect();
         let mut futures = Vec::with_capacity(client_req_paris.len());
         for (client, req) in client_req_paris {
-            futures.push(async move { client.write_internal(ctx, &req).await })
+            let ctx_clone = ctx.clone();
+            futures.push(async move { client.write_internal(&ctx_clone, &req).await })
         }
 
         // Await rpc results and collect results.

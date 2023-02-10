@@ -18,7 +18,7 @@ zstd = { version = "0.12", default-features = false }
 
 [dependencies.ceresdbproto]
 git = "https://github.com/CeresDB/ceresdbproto.git"
-rev = "55495dd395d12a1f97f6c98e355290671d107c44"
+rev = "43939799b2e65e3fc5795118fc77593f7c4b19d7"
 
 [dev-dependencies]
 chrono = "0.4"

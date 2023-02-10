@@ -4,9 +4,6 @@
 
 use std::collections::HashMap;
 
-use ceresdbproto::storage::WriteRequest as WriteRequestPb;
-use pb_builder::RequestPbBuilder;
-
 use crate::model::write::point::{Point, PointGroup};
 
 /// Write request
@@ -27,19 +24,12 @@ impl Request {
     }
 }
 
-impl From<Request> for WriteRequestPb {
-    fn from(req: Request) -> Self {
-        let pb_builder = RequestPbBuilder(req);
-        pb_builder.build()
-    }
-}
-
-mod pb_builder {
+pub mod pb_builder {
     use std::collections::{BTreeMap, HashMap};
 
     use ceresdbproto::storage::{
-        Field, FieldGroup as FieldGroupPb, Tag as TagPb, WriteRequest as WriteRequestPb,
-        WriteSeriesEntry as WriteSeriesEntryPb, WriteTableRequest as WriteTableRequestPb,
+        Field, FieldGroup as FieldGroupPb, Tag as TagPb, WriteSeriesEntry as WriteSeriesEntryPb,
+        WriteTableRequest as WriteTableRequestPb,
     };
 
     use crate::model::{
@@ -50,10 +40,10 @@ mod pb_builder {
     type TagsKey = Vec<u8>;
 
     /// Used to build [WriteRequestPb] from [Request].
-    pub struct RequestPbBuilder(pub Request);
+    pub struct WriteTableRequestPbsBuilder(pub Request);
 
-    impl RequestPbBuilder {
-        pub fn build(self) -> WriteRequestPb {
+    impl WriteTableRequestPbsBuilder {
+        pub fn build(self) -> Vec<WriteTableRequestPb> {
             // Partition points by table.
             let point_group = self.0.point_groups;
 
@@ -65,9 +55,7 @@ mod pb_builder {
                 table_request_pbs.push(write_table_request_pb);
             }
 
-            WriteRequestPb {
-                table_requests: table_request_pbs,
-            }
+            table_request_pbs
         }
     }
 
@@ -239,7 +227,6 @@ mod pb_builder {
 mod test {
     use std::collections::BTreeMap;
 
-    use ceresdbproto::storage::WriteRequest as WriteRequestPb;
     use chrono::Local;
 
     use super::pb_builder::make_tags_key;
@@ -247,6 +234,7 @@ mod test {
         value::Value,
         write::{
             point::{Point, PointGroupBuilder},
+            request::pb_builder::WriteTableRequestPbsBuilder,
             Request,
         },
     };
@@ -337,10 +325,10 @@ mod test {
         write_req.add_point_group(points).add_point_group(points2);
 
         // Build pb.
-        let write_req_pb = WriteRequestPb::from(write_req.clone());
+        let table_requests = WriteTableRequestPbsBuilder(write_req.clone()).build();
         // Recover points from pb and compare.
         let mut points = Vec::new();
-        for table_request in write_req_pb.table_requests {
+        for table_request in table_requests {
             let tag_names = table_request.tag_names;
             let field_names = table_request.field_names;
             for entry in table_request.entries {

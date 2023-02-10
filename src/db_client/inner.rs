@@ -4,12 +4,13 @@
 
 use std::sync::Arc;
 
+use ceresdbproto::storage;
 use tokio::sync::OnceCell;
 
 use crate::{
     model::{
         sql_query::{Request as SqlQueryRequest, Response as SqlQueryResponse},
-        write::{Request as WriteRequest, Response as WriteResponse},
+        write::{Request as WriteRequest, Response as WriteResponse, WriteTableRequestPbsBuilder},
     },
     rpc_client::{RpcClient, RpcClientFactory, RpcContext},
     Result,
@@ -43,11 +44,21 @@ impl<F: RpcClientFactory> InnerClient<F> {
         ctx: &RpcContext,
         req: &SqlQueryRequest,
     ) -> Result<SqlQueryResponse> {
+        assert!(ctx.database.is_some());
+
         let client_handle = self.inner_client.get_or_try_init(|| self.init()).await?;
+        let req_ctx = storage::RequestContext {
+            database: ctx.database.clone().unwrap(),
+        };
+        let req_pb = storage::SqlQueryRequest {
+            context: Some(req_ctx),
+            tables: req.tables.clone(),
+            sql: req.sql.clone(),
+        };
 
         client_handle
             .as_ref()
-            .sql_query(ctx, req.clone().into())
+            .sql_query(ctx, req_pb)
             .await
             .and_then(SqlQueryResponse::try_from)
     }
@@ -57,9 +68,20 @@ impl<F: RpcClientFactory> InnerClient<F> {
         ctx: &RpcContext,
         req: &WriteRequest,
     ) -> Result<WriteResponse> {
+        assert!(ctx.database.is_some());
+
         let client_handle = self.inner_client.get_or_try_init(|| self.init()).await?;
+        let req_ctx = storage::RequestContext {
+            database: ctx.database.clone().unwrap(),
+        };
+        let write_table_request_pbs = WriteTableRequestPbsBuilder(req.clone()).build();
+        let req_pb = storage::WriteRequest {
+            context: Some(req_ctx),
+            table_requests: write_table_request_pbs,
+        };
+
         client_handle
-            .write(ctx, req.clone().into())
+            .write(ctx, req_pb)
             .await
             .map(|resp_pb| resp_pb.into())
     }

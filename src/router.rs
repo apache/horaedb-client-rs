@@ -140,7 +140,7 @@ mod test {
 
         // Follow these steps to check wether cache is used or not:
         // route --> change route_table --> route again.
-        let ctx = RpcContext::new("test".to_string(), "".to_string());
+        let ctx = RpcContext::default();
         let tables = vec![table1.clone(), table2.clone()];
         let route_client = RouterImpl::new(default_endpoint.clone(), Arc::new(mock_rpc_client));
         let route_res1 = route_client.route(&tables, &ctx).await.unwrap();

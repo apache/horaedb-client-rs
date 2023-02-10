@@ -6,5 +6,5 @@ pub mod point;
 mod request;
 mod response;
 
-pub use request::Request;
+pub use request::{pb_builder::WriteTableRequestPbsBuilder, Request};
 pub use response::Response;

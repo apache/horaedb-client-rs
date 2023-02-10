@@ -34,6 +34,7 @@ pub struct Builder {
     endpoint: String,
     rpc_opts: RpcOptions,
     grpc_config: RpcConfig,
+    default_database: Option<String>,
 }
 
 impl Builder {
@@ -44,6 +45,7 @@ impl Builder {
             endpoint,
             rpc_opts: RpcOptions::default(),
             grpc_config: RpcConfig::default(),
+            default_database: None,
         }
     }
 
@@ -59,13 +61,27 @@ impl Builder {
         self
     }
 
+    #[inline]
+    pub fn default_database(mut self, default_database: String) -> Self {
+        self.default_database = Some(default_database);
+        self
+    }
+
     pub fn build(self) -> Arc<dyn DbClient> {
         let rpc_client_factory =
             Arc::new(RpcClientImplFactory::new(self.grpc_config, self.rpc_opts));
 
         match self.mode {
-            Mode::Direct => Arc::new(RouteBasedImpl::new(rpc_client_factory, self.endpoint)),
-            Mode::Proxy => Arc::new(RawImpl::new(rpc_client_factory, self.endpoint)),
+            Mode::Direct => Arc::new(RouteBasedImpl::new(
+                rpc_client_factory,
+                self.endpoint,
+                self.default_database,
+            )),
+            Mode::Proxy => Arc::new(RawImpl::new(
+                rpc_client_factory,
+                self.endpoint,
+                self.default_database,
+            )),
         }
     }
 }
