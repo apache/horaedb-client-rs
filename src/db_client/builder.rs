@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::{
     db_client::{raw::RawImpl, route_based::RouteBasedImpl, DbClient},
     rpc_client::RpcClientImplFactory,
-    RpcConfig, RpcOptions,
+    RpcConfig,
 };
 
 /// Client mode
@@ -32,9 +32,8 @@ pub enum Mode {
 pub struct Builder {
     mode: Mode,
     endpoint: String,
-    rpc_opts: RpcOptions,
-    grpc_config: RpcConfig,
     default_database: Option<String>,
+    grpc_config: RpcConfig,
 }
 
 impl Builder {
@@ -43,22 +42,9 @@ impl Builder {
         Self {
             mode,
             endpoint,
-            rpc_opts: RpcOptions::default(),
             grpc_config: RpcConfig::default(),
             default_database: None,
         }
-    }
-
-    #[inline]
-    pub fn grpc_config(mut self, grpc_config: RpcConfig) -> Self {
-        self.grpc_config = grpc_config;
-        self
-    }
-
-    #[inline]
-    pub fn rpc_opts(mut self, rpc_opts: RpcOptions) -> Self {
-        self.rpc_opts = rpc_opts;
-        self
     }
 
     #[inline]
@@ -67,9 +53,14 @@ impl Builder {
         self
     }
 
+    #[inline]
+    pub fn grpc_config(mut self, grpc_config: RpcConfig) -> Self {
+        self.grpc_config = grpc_config;
+        self
+    }
+
     pub fn build(self) -> Arc<dyn DbClient> {
-        let rpc_client_factory =
-            Arc::new(RpcClientImplFactory::new(self.grpc_config, self.rpc_opts));
+        let rpc_client_factory = Arc::new(RpcClientImplFactory::new(self.grpc_config));
 
         match self.mode {
             Mode::Direct => Arc::new(RouteBasedImpl::new(

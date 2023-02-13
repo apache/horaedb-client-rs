@@ -12,6 +12,6 @@ mod util;
 
 pub use crate::{
     errors::{Error, Result},
-    options::{RpcConfig, RpcOptions},
+    options::RpcConfig,
     rpc_client::RpcContext,
 };

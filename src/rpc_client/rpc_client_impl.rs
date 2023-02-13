@@ -20,7 +20,7 @@ use tonic::{
 
 use crate::{
     errors::{Error, Result, ServerError},
-    options::{RpcConfig, RpcOptions},
+    options::RpcConfig,
     rpc_client::{RpcClient, RpcClientFactory, RpcContext},
     util::is_ok,
 };
@@ -122,16 +122,12 @@ impl RpcClient for RpcClientImpl {
 }
 
 pub struct RpcClientImplFactory {
-    rpc_opts: RpcOptions,
     grpc_config: RpcConfig,
 }
 
 impl RpcClientImplFactory {
-    pub fn new(grpc_config: RpcConfig, rpc_opts: RpcOptions) -> Self {
-        Self {
-            rpc_opts,
-            grpc_config,
-        }
+    pub fn new(grpc_config: RpcConfig) -> Self {
+        Self { grpc_config }
     }
 
     #[inline]
@@ -153,12 +149,12 @@ impl RpcClientFactory for RpcClientImplFactory {
 
         let configured_endpoint = match self.grpc_config.keep_alive_while_idle {
             true => configured_endpoint
-                .connect_timeout(self.rpc_opts.connect_timeout)
+                .connect_timeout(self.grpc_config.connect_timeout)
                 .keep_alive_timeout(self.grpc_config.keep_alive_timeout)
                 .keep_alive_while_idle(true)
                 .http2_keep_alive_interval(self.grpc_config.keep_alive_interval),
             false => configured_endpoint
-                .connect_timeout(self.rpc_opts.connect_timeout)
+                .connect_timeout(self.grpc_config.connect_timeout)
                 .keep_alive_while_idle(false),
         };
         let channel = configured_endpoint
@@ -170,8 +166,8 @@ impl RpcClientFactory for RpcClientImplFactory {
             })?;
         Ok(Arc::new(RpcClientImpl::new(
             channel,
-            self.rpc_opts.read_timeout,
-            self.rpc_opts.write_timeout,
+            self.grpc_config.read_timeout,
+            self.grpc_config.write_timeout,
         )))
     }
 }
