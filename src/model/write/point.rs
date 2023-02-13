@@ -24,26 +24,30 @@ pub struct Point {
 
 #[derive(Debug)]
 pub struct PointBuilder {
+    table: String,
     timestamp: Option<i64>,
     // tags' traversing should have definite order
     tags: BTreeMap<String, Value>,
     fields: BTreeMap<String, Value>,
-    points_builder: PointGroupBuilder,
     contains_reserved_column_name: bool,
 }
 
 impl PointBuilder {
-    pub fn new(points_builder: PointGroupBuilder) -> Self {
+    pub fn new(table: String) -> Self {
         Self {
+            table,
             timestamp: None,
             tags: BTreeMap::new(),
             fields: BTreeMap::new(),
-            points_builder,
             contains_reserved_column_name: false,
         }
     }
 
-    #[must_use]
+    pub fn table(mut self, table: String) -> Self {
+        self.table = table;
+        self
+    }
+
     pub fn timestamp(mut self, timestamp: i64) -> Self {
         self.timestamp = Some(timestamp);
         self
@@ -53,7 +57,6 @@ impl PointBuilder {
     ///
     /// You cannot set tag with name like 'timestamp' or 'tsid',
     /// because they are keywords in ceresdb.
-    #[allow(clippy::return_self_not_must_use)]
     pub fn tag(mut self, name: String, value: Value) -> Self {
         if is_reserved_column_name(&name) {
             self.contains_reserved_column_name = true;
@@ -63,7 +66,6 @@ impl PointBuilder {
         self
     }
 
-    #[must_use]
     pub fn field(mut self, name: String, value: Value) -> Self {
         if is_reserved_column_name(&name) {
             self.contains_reserved_column_name = true;
@@ -73,9 +75,7 @@ impl PointBuilder {
         self
     }
 
-    /// Finish building this row and append this row into the
-    /// [`WriteRequestBuilder`].
-    pub fn finish(self) -> Result<PointGroupBuilder, String> {
+    pub fn build(self) -> Result<Point, String> {
         if self.contains_reserved_column_name {
             return Err("Tag or field name reserved column name in ceresdb".to_string());
         }
@@ -88,54 +88,11 @@ impl PointBuilder {
             .timestamp
             .ok_or_else(|| "Timestamp must be set".to_string())?;
 
-        // Build [PointContext] and push it into [PointGroupBuilder].
-        let mut points_builder = self.points_builder;
-        let table = points_builder.table.clone();
-        let point = Point {
-            table,
+        Ok(Point {
+            table: self.table,
             timestamp,
             tags: self.tags,
             fields: self.fields,
-        };
-        points_builder.points.push(point);
-
-        Ok(points_builder)
-    }
-}
-
-/// Points in specific table.
-#[derive(Debug)]
-pub struct PointGroup {
-    pub table: String,
-    pub points: Vec<Point>,
-}
-
-/// Points(in specific table) builder
-#[derive(Debug)]
-pub struct PointGroupBuilder {
-    table: String,
-    points: Vec<Point>,
-}
-
-impl PointGroupBuilder {
-    pub fn new(table: String) -> Self {
-        Self {
-            table,
-            points: Vec::new(),
-        }
-    }
-
-    #[must_use]
-    pub fn add_point(self) -> PointBuilder {
-        PointBuilder::new(self)
-    }
-
-    /// Finish building this row and append this row into the
-    /// [`WriteRequestBuilder`].
-    pub fn build(self) -> PointGroup {
-        PointGroup {
-            table: self.table,
-            points: self.points,
-        }
+        })
     }
 }

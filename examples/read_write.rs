@@ -7,7 +7,7 @@ use ceresdb_client_rs::{
     model::{
         sql_query::{display::CsvFormatter, Request as SqlQueryRequest},
         value::Value,
-        write::{point::PointGroupBuilder, Request as WriteRequest},
+        write::{point::PointBuilder, Request as WriteRequest},
     },
     RpcContext,
 };
@@ -51,49 +51,49 @@ async fn drop_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let ts1 = Local::now().timestamp_millis();
     let mut write_req = WriteRequest::default();
-    let point_group_builder = PointGroupBuilder::new("ceresdb".to_string());
+    let test_table = "ceresdb";
 
-    let point_group = point_group_builder
-        .add_point()
-        .timestamp(ts1)
-        .tag("str_tag".to_string(), Value::String("tag_val1".to_string()))
-        .tag("int_tag".to_string(), Value::Int32(42))
-        .tag(
-            "var_tag".to_string(),
-            Value::Varbinary(b"tag_bin_val1".to_vec()),
-        )
-        .field(
-            "str_field".to_string(),
-            Value::String("field_val1".to_string()),
-        )
-        .field("int_field".to_string(), Value::Int32(42))
-        .field(
-            "bin_field".to_string(),
-            Value::Varbinary(b"field_bin_val1".to_vec()),
-        )
-        .finish()
-        .unwrap()
-        .add_point()
-        .timestamp(ts1 + 40)
-        .tag("str_tag".to_string(), Value::String("tag_val2".to_string()))
-        .tag("int_tag".to_string(), Value::Int32(43))
-        .tag(
-            "var_tag".to_string(),
-            Value::Varbinary(b"tag_bin_val2".to_vec()),
-        )
-        .field(
-            "str_field".to_string(),
-            Value::String("field_val2".to_string()),
-        )
-        .field(
-            "bin_field".to_string(),
-            Value::Varbinary(b"field_bin_val2".to_vec()),
-        )
-        .finish()
-        .unwrap()
-        .build();
+    let points = vec![
+        PointBuilder::new(test_table.to_string())
+            .timestamp(ts1)
+            .tag("str_tag".to_string(), Value::String("tag_val1".to_string()))
+            .tag("int_tag".to_string(), Value::Int32(42))
+            .tag(
+                "var_tag".to_string(),
+                Value::Varbinary(b"tag_bin_val1".to_vec()),
+            )
+            .field(
+                "str_field".to_string(),
+                Value::String("field_val1".to_string()),
+            )
+            .field("int_field".to_string(), Value::Int32(42))
+            .field(
+                "bin_field".to_string(),
+                Value::Varbinary(b"field_bin_val1".to_vec()),
+            )
+            .build()
+            .unwrap(),
+        PointBuilder::new(test_table.to_string())
+            .timestamp(ts1 + 40)
+            .tag("str_tag".to_string(), Value::String("tag_val2".to_string()))
+            .tag("int_tag".to_string(), Value::Int32(43))
+            .tag(
+                "var_tag".to_string(),
+                Value::Varbinary(b"tag_bin_val2".to_vec()),
+            )
+            .field(
+                "str_field".to_string(),
+                Value::String("field_val2".to_string()),
+            )
+            .field(
+                "bin_field".to_string(),
+                Value::Varbinary(b"field_bin_val2".to_vec()),
+            )
+            .build()
+            .unwrap(),
+    ];
 
-    write_req.add_point_group(point_group);
+    write_req.add_points(points);
 
     let res = client
         .write(rpc_ctx, &write_req)

@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use crate::model::write::point::{Point, PointGroup};
+use crate::model::write::point::Point;
 
 /// Write request
 #[derive(Clone, Debug, Default)]
@@ -13,12 +13,20 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn add_point_group(&mut self, point_group: PointGroup) -> &mut Self {
+    pub fn add_point(&mut self, point: Point) -> &mut Self {
         let points = self
             .point_groups
-            .entry(point_group.table)
+            .entry(point.table.clone())
             .or_insert_with(Vec::new);
-        points.extend(point_group.points);
+        points.push(point);
+
+        self
+    }
+
+    pub fn add_points(&mut self, points: Vec<Point>) -> &mut Self {
+        for point in points {
+            self.add_point(point);
+        }
 
         self
     }
@@ -233,7 +241,7 @@ mod test {
     use crate::model::{
         value::Value,
         write::{
-            point::{Point, PointGroupBuilder},
+            point::{Point, PointBuilder},
             request::pb_builder::WriteTableRequestPbsBuilder,
             Request,
         },
@@ -256,73 +264,70 @@ mod test {
         let test_table2 = "test_table2";
 
         // Build write request.
-        let points_builder = PointGroupBuilder::new(test_table.to_string());
-        let points = points_builder
-            .add_point()
-            .timestamp(ts1)
-            .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
-            .tag(
-                test_tag2.0.to_owned(),
-                Value::String(test_tag2.1.to_owned()),
-            )
-            .field(test_field1.0.to_owned(), Value::Int32(test_field1.1))
-            .finish()
-            .unwrap()
-            .add_point()
-            .timestamp(ts1)
-            .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
-            .tag(
-                test_tag2.0.to_owned(),
-                Value::String(test_tag2.1.to_owned()),
-            )
-            .field(
-                test_field2.0.to_owned(),
-                Value::String(test_field2.1.to_owned()),
-            )
-            .finish()
-            .unwrap()
-            .add_point()
-            .timestamp(ts2)
-            .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
-            .tag(
-                test_tag2.0.to_owned(),
-                Value::String(test_tag2.1.to_owned()),
-            )
-            .field(test_field3.0.to_owned(), Value::Double(test_field3.1))
-            .finish()
-            .unwrap()
-            .add_point()
-            .timestamp(ts1)
-            .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
-            .tag(
-                test_tag2.0.to_owned(),
-                Value::String(test_tag2.1.to_owned()),
-            )
-            .tag(
-                test_tag3.0.to_owned(),
-                Value::Varbinary(test_tag3.1.to_vec()),
-            )
-            .field(test_field1.0.to_owned(), Value::Int32(test_field1.1))
-            .finish()
-            .unwrap()
-            .build();
-
-        let points_builder2 = PointGroupBuilder::new(test_table2.to_string());
-        let points2 = points_builder2
-            .add_point()
-            .timestamp(ts1)
-            .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
-            .tag(
-                test_tag2.0.to_owned(),
-                Value::String(test_tag2.1.to_owned()),
-            )
-            .field(test_field1.0.to_owned(), Value::Int32(test_field1.1))
-            .finish()
-            .unwrap()
-            .build();
-
         let mut write_req = Request::default();
-        write_req.add_point_group(points).add_point_group(points2);
+
+        let points = vec![
+            PointBuilder::new(test_table.to_string())
+                .timestamp(ts1)
+                .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
+                .tag(
+                    test_tag2.0.to_owned(),
+                    Value::String(test_tag2.1.to_owned()),
+                )
+                .field(test_field1.0.to_owned(), Value::Int32(test_field1.1))
+                .build()
+                .unwrap(),
+            PointBuilder::new(test_table.to_string())
+                .timestamp(ts1)
+                .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
+                .tag(
+                    test_tag2.0.to_owned(),
+                    Value::String(test_tag2.1.to_owned()),
+                )
+                .field(
+                    test_field2.0.to_owned(),
+                    Value::String(test_field2.1.to_owned()),
+                )
+                .build()
+                .unwrap(),
+            PointBuilder::new(test_table.to_string())
+                .timestamp(ts2)
+                .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
+                .tag(
+                    test_tag2.0.to_owned(),
+                    Value::String(test_tag2.1.to_owned()),
+                )
+                .field(test_field3.0.to_owned(), Value::Double(test_field3.1))
+                .build()
+                .unwrap(),
+            PointBuilder::new(test_table.to_string())
+                .timestamp(ts1)
+                .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
+                .tag(
+                    test_tag2.0.to_owned(),
+                    Value::String(test_tag2.1.to_owned()),
+                )
+                .tag(
+                    test_tag3.0.to_owned(),
+                    Value::Varbinary(test_tag3.1.to_vec()),
+                )
+                .field(test_field1.0.to_owned(), Value::Int32(test_field1.1))
+                .build()
+                .unwrap(),
+        ];
+
+        let points2 = vec![PointBuilder::new(test_table2.to_string())
+            .timestamp(ts1)
+            .tag(test_tag1.0.to_owned(), Value::Int32(test_tag1.1))
+            .tag(
+                test_tag2.0.to_owned(),
+                Value::String(test_tag2.1.to_owned()),
+            )
+            .field(test_field1.0.to_owned(), Value::Int32(test_field1.1))
+            .build()
+            .unwrap()];
+
+        write_req.add_points(points).add_points(points2);
 
         // Build pb.
         let table_requests = WriteTableRequestPbsBuilder(write_req.clone()).build();
