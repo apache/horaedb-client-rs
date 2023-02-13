@@ -21,12 +21,14 @@ use crate::{
 /// Now, [`RawImpl`] just wraps [`InnerClient`] simply.
 pub struct RawImpl<F: RpcClientFactory> {
     inner_client: InnerClient<F>,
+    default_database: Option<String>,
 }
 
 impl<F: RpcClientFactory> RawImpl<F> {
-    pub fn new(factory: Arc<F>, endpoint: String) -> Self {
+    pub fn new(factory: Arc<F>, endpoint: String, default_database: Option<String>) -> Self {
         Self {
             inner_client: InnerClient::new(factory, endpoint),
+            default_database,
         }
     }
 }
@@ -34,10 +36,12 @@ impl<F: RpcClientFactory> RawImpl<F> {
 #[async_trait]
 impl<F: RpcClientFactory> DbClient for RawImpl<F> {
     async fn sql_query(&self, ctx: &RpcContext, req: &SqlQueryRequest) -> Result<SqlQueryResponse> {
-        self.inner_client.sql_query_internal(ctx, req).await
+        let ctx = crate::db_client::resolve_database(ctx, &self.default_database)?;
+        self.inner_client.sql_query_internal(&ctx, req).await
     }
 
     async fn write(&self, ctx: &RpcContext, req: &WriteRequest) -> Result<WriteResponse> {
-        self.inner_client.write_internal(ctx, req).await
+        let ctx = crate::db_client::resolve_database(ctx, &self.default_database)?;
+        self.inner_client.write_internal(&ctx, req).await
     }
 }

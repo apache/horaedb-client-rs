@@ -9,12 +9,12 @@ use ceresdb_client_rs::{
         value::Value,
         write::{point::PointGroupBuilder, Request as WriteRequest},
     },
-    RpcConfig, RpcContext,
+    RpcContext,
 };
 use chrono::Local;
 
 async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
-    let create_table_sql = r#"CREATE TABLE ceresdb (
+    let create_table_sql = r#"CREATE TABLE IF NOT EXISTS ceresdb (
                 str_tag string TAG,
                 int_tag int32 TAG,
                 var_tag varbinary TAG,
@@ -107,7 +107,10 @@ async fn sql_query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
         tables: vec!["ceresdb".to_string()],
         sql: "select * from ceresdb;".to_string(),
     };
-    let resp = client.sql_query(rpc_ctx, &req).await.unwrap();
+    let resp = client
+        .sql_query(rpc_ctx, &req)
+        .await
+        .expect("Should succeed to query");
     let csv_formatter = CsvFormatter { resp };
     println!("Rows in the resp:\n{}", csv_formatter);
 }
@@ -115,10 +118,8 @@ async fn sql_query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 #[tokio::main]
 async fn main() {
     // you should ensure ceresdb is running, and grpc port is set to 8831
-    let client = Builder::new("127.0.0.1:8831".to_string(), Mode::Direct)
-        .grpc_config(RpcConfig::default())
-        .build();
-    let rpc_ctx = RpcContext::new("public".to_string(), "".to_string());
+    let client = Builder::new("127.0.0.1:8831".to_string(), Mode::Direct).build();
+    let rpc_ctx = RpcContext::default().database("public".to_string());
 
     println!("------------------------------------------------------------------");
     println!("### create table:");

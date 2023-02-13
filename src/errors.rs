@@ -52,6 +52,9 @@ pub enum Error {
 
     #[error("failed to decode arrow payload, msg:{0}")]
     DecodeArrowPayload(Box<dyn std::error::Error + Send + Sync>),
+
+    #[error("failed to find a database")]
+    NoDatabase,
 }
 
 #[derive(Debug)]

@@ -19,32 +19,23 @@ pub use rpc_client_impl::RpcClientImplFactory;
 use crate::errors::Result;
 
 /// Context for rpc request.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RpcContext {
-    pub tenant: String,
-    pub token: String,
+    pub database: Option<String>,
     pub timeout: Option<Duration>,
 }
 
 impl RpcContext {
-    pub fn new(tenant: String, token: String) -> Self {
-        Self {
-            tenant,
-            token,
-            timeout: None,
-        }
+    pub fn database(mut self, database: String) -> Self {
+        self.database = Some(database);
+        self
     }
 
-    /// Build [RpcContext] with timeout.
-    pub fn with_timeout(tenant: String, token: String, timeout: Duration) -> Self {
-        Self {
-            tenant,
-            token,
-            timeout: Some(timeout),
-        }
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = Some(timeout);
+        self
     }
 }
-
 #[async_trait]
 pub trait RpcClient: Send + Sync {
     async fn sql_query(&self, ctx: &RpcContext, req: QueryRequestPb) -> Result<QueryResponsePb>;
