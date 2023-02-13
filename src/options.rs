@@ -8,16 +8,22 @@ use std::time::Duration;
 pub struct RpcConfig {
     /// Set the thread num as the cpu cores number if not set.
     pub thread_num: Option<usize>,
-    /// -1 means unlimited
+    /// -1 means unlimited.
     pub max_send_msg_len: i32,
-    /// -1 means unlimited
+    /// -1 means unlimited.
     pub max_recv_msg_len: i32,
-    // an interval for htt2 ping frames
+    /// An interval for htt2 ping frames.
     pub keep_alive_interval: Duration,
-    // timeout for http2 ping frame acknowledgement
+    /// Timeout for http2 ping frame acknowledgement.
     pub keep_alive_timeout: Duration,
-    // enables http2_keep_alive or not
+    /// Enables http2_keep_alive or not.
     pub keep_alive_while_idle: bool,
+    /// Timeout for write operation.
+    pub default_write_timeout: Duration,
+    /// Timeout for sql_query operation.
+    pub default_sql_query_timeout: Duration,
+    /// Timeout for connection.
+    pub connect_timeout: Duration,
 }
 
 impl Default for RpcConfig {
@@ -35,22 +41,8 @@ impl Default for RpcConfig {
             keep_alive_timeout: Duration::from_secs(3),
             // default keep http2 connections alive while idle
             keep_alive_while_idle: true,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct RpcOptions {
-    pub write_timeout: Duration,
-    pub read_timeout: Duration,
-    pub connect_timeout: Duration,
-}
-
-impl Default for RpcOptions {
-    fn default() -> Self {
-        Self {
-            write_timeout: Duration::from_secs(5),
-            read_timeout: Duration::from_secs(60),
+            default_write_timeout: Duration::from_secs(5),
+            default_sql_query_timeout: Duration::from_secs(60),
             connect_timeout: Duration::from_secs(3),
         }
     }
