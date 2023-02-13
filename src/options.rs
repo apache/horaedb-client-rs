@@ -19,9 +19,9 @@ pub struct RpcConfig {
     /// Enables http2_keep_alive or not.
     pub keep_alive_while_idle: bool,
     /// Timeout for write operation.
-    pub write_timeout: Duration,
-    /// Timeout for read operation.
-    pub read_timeout: Duration,
+    pub default_write_timeout: Duration,
+    /// Timeout for sql_query operation.
+    pub default_sql_query_timeout: Duration,
     /// Timeout for connection.
     pub connect_timeout: Duration,
 }
@@ -41,8 +41,8 @@ impl Default for RpcConfig {
             keep_alive_timeout: Duration::from_secs(3),
             // default keep http2 connections alive while idle
             keep_alive_while_idle: true,
-            write_timeout: Duration::from_secs(5),
-            read_timeout: Duration::from_secs(60),
+            default_write_timeout: Duration::from_secs(5),
+            default_sql_query_timeout: Duration::from_secs(60),
             connect_timeout: Duration::from_secs(3),
         }
     }
