@@ -15,7 +15,7 @@ use paste::paste;
 
 use crate::{model::value::Value, Error, Result};
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Row {
     // It is better to iterate in a fixed order, also can save memory.
     columns: Vec<Column>,
@@ -31,7 +31,7 @@ impl Row {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Column {
     pub name: String,
     pub value: Value,
@@ -60,7 +60,7 @@ macro_rules! fill_column {
     };
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RowBuilder {
     pub col_idx_to_name: Vec<String>,
     pub row_values: Vec<Vec<Value>>,

@@ -4,7 +4,7 @@
 
 use ceresdbproto::storage::WriteResponse as WriteResponsePb;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Response {
     pub success: u32,
     pub failed: u32,
