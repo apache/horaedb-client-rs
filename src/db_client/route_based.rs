@@ -159,12 +159,15 @@ impl<F: RpcClientFactory> DbClient for RouteBasedImpl<F> {
         let evicts: Vec<_> = tables_result_pairs
             .iter()
             .filter_map(|(tables, result)| {
-                if let Err(Error::Server(server_error)) = &result &&
-                should_refresh(server_error.code, &server_error.msg) {
-                Some(tables.clone())
-            } else {
-                None
-            }
+                if let Err(Error::Server(server_error)) = &result {
+                    if should_refresh(server_error.code, &server_error.msg) {
+                        Some(tables.clone())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
             })
             .flatten()
             .collect();
