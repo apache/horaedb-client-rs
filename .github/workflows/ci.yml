@@ -26,7 +26,7 @@ jobs:
     timeout-minutes: 20
     strategy:
       matrix:
-        rust: [1.62.0]
+        rust: [stable]
     container:
       image: rust:${{ matrix.rust }}-slim-bullseye
     steps:
@@ -34,7 +34,7 @@ jobs:
       - name: Setup Build Environment
         run: |
           apt update
-          apt install --yes cmake 
+          apt install --yes cmake
           rm -rf /var/lib/apt/lists/*
       - name: Setup Toolchain
         run: |
@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       matrix:
-        rust: [1.62.0]
+        rust: [stable]
     container:
       image: rust:${{ matrix.rust }}-slim-bullseye
       env:
@@ -97,7 +97,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       matrix:
-        rust: [1.62.0]
+        rust: [stable]
     container:
       image: rust:${{ matrix.rust }}-slim-bullseye
       env:

@@ -3,6 +3,10 @@ name = "ceresdb-client"
 version = "1.0.0"
 authors = ["CeresDB Authors <ceresdbservice@gmail.com>"]
 edition = "2021"
+repository = "https://github.com/CeresDB/ceresdb-client-rs"
+license = "Apache-2.0"
+description = "Rust implementation of CeresDB client."
+readme = "README.md"
 
 [dependencies]
 arrow = "23.0.0"

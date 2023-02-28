@@ -1,9 +1,11 @@
 # CeresDB Rust Client
 
 ![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)
+[![Crates.io](https://img.shields.io/crates/v/ceresdb-client.svg)](https://crates.io/crates/ceresdb-client)
 
 ## Introduction
 The rust client for CeresDB.
+
 CeresDB is a high-performance, distributed, schema-less, cloud native time-series database that can handle both time-series and analytics workloads.
 
 ## Support features
