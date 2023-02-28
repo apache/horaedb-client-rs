@@ -283,7 +283,7 @@ mod test {
             .collect::<Vec<_>>();
         let timestamp_col_values = timestamp_values
             .into_iter()
-            .map(|v| Value::Timestamp(v as i64))
+            .map(Value::Timestamp)
             .collect::<Vec<_>>();
         let timestamp32_col_values = timestamp32_values
             .into_iter()
