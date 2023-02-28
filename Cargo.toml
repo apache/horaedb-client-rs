@@ -1,6 +1,6 @@
 [package]
-name = "ceresdb-client-rs"
-version = "0.1.0"
+name = "ceresdb-client"
+version = "1.0.0"
 authors = ["CeresDB Authors <ceresdbservice@gmail.com>"]
 edition = "2021"
 
@@ -21,4 +21,4 @@ chrono = "0.4"
 tokio = { version = "1.15", features = ["full"] }
 
 [lib]
-name = "ceresdb_client_rs"
+name = "ceresdb_client"

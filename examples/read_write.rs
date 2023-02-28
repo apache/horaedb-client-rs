@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use ceresdb_client_rs::{
+use ceresdb_client::{
     db_client::{Builder, DbClient, Mode},
     model::{
         sql_query::{display::CsvFormatter, Request as SqlQueryRequest},

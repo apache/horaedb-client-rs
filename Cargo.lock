@@ -194,8 +194,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "ceresdb-client-rs"
-version = "0.1.0"
+name = "ceresdb-client"
+version = "1.0.0"
 dependencies = [
  "arrow",
  "async-trait",
