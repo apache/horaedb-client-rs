@@ -90,10 +90,7 @@ pub mod pb_builder {
             }
 
             // Flatten the write series entires.
-            let series_entires = series_entries_by_tags
-                .into_iter()
-                .map(|(_, entires)| entires)
-                .collect();
+            let series_entires = series_entries_by_tags.into_values().collect();
 
             Self {
                 table,
@@ -380,10 +377,7 @@ mod test {
             });
             expected_points.extend(points);
         }
-        let expected_points = expected_points
-            .into_iter()
-            .map(|(_, point)| point)
-            .collect::<Vec<_>>();
+        let expected_points = expected_points.into_values().collect::<Vec<_>>();
 
         make_ordered(&mut points);
 

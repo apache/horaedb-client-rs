@@ -75,7 +75,7 @@ impl Router for RouterImpl {
         let req_ctx = storage::RequestContext {
             database: ctx.database.clone().unwrap(),
         };
-        let miss_tables = misses.iter().map(|(m, _)| m.clone()).collect();
+        let miss_tables = misses.keys().cloned().collect();
         let req = RouteRequest {
             context: Some(req_ctx),
             tables: miss_tables,

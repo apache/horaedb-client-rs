@@ -94,7 +94,7 @@ impl<F: RpcClientFactory> DbClient for RouteBasedImpl<F> {
         let ctx = crate::db_client::resolve_database(ctx, &self.default_database)?;
 
         // Get tables' related endpoints(some may not exist).
-        let should_routes: Vec<_> = req.point_groups.iter().map(|(m, _)| m.clone()).collect();
+        let should_routes: Vec<_> = req.point_groups.keys().cloned().collect();
         let router_handle = self.router.get_or_try_init(|| self.init_router()).await?;
         let endpoints = router_handle.route(&should_routes, &ctx).await?;
 
@@ -126,7 +126,7 @@ impl<F: RpcClientFactory> DbClient for RouteBasedImpl<F> {
             .enumerate()
             .map(|(idx, (ep, req))| {
                 assert!(idx < write_tables.len());
-                write_tables[idx].extend(req.point_groups.iter().map(|(m, _)| m.clone()));
+                write_tables[idx].extend(req.point_groups.keys().cloned());
                 (self.standalone_pool.get_or_create(&ep), req)
             })
             .collect();
