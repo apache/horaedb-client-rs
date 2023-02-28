@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 arrow = "23.0.0"
 async-trait = "0.1.57"
+ceresdbproto = "1.0.1"
 dashmap = "5.3.4"
 futures = "0.3"
 paste = "1.0"
@@ -14,11 +15,6 @@ thiserror = "1.0.38"
 tokio = "1.15"
 tonic = "0.8.1"
 zstd = { version = "0.12", default-features = false }
-
-
-[dependencies.ceresdbproto]
-git = "https://github.com/CeresDB/ceresdbproto.git"
-rev = "43939799b2e65e3fc5795118fc77593f7c4b19d7"
 
 [dev-dependencies]
 chrono = "0.4"
