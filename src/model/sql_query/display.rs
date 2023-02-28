@@ -20,7 +20,7 @@ impl Display for CsvFormatter {
             let col_names = first_row
                 .columns()
                 .iter()
-                .map(|col| col.name.clone())
+                .map(|col| col.name().to_string())
                 .collect::<Vec<_>>();
             for col_name in &col_names {
                 f.write_fmt(format_args!("{},", col_name))?;
@@ -30,7 +30,7 @@ impl Display for CsvFormatter {
             // Get and output rows.
             for row in &self.resp.rows {
                 for column in row.columns() {
-                    f.write_fmt(format_args!("{:?},", column.value))?;
+                    f.write_fmt(format_args!("{:?},", column.value()))?;
                 }
                 f.write_str("\n")?;
             }

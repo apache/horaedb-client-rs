@@ -33,13 +33,23 @@ impl Row {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Column {
-    pub name: String,
-    pub value: Value,
+    name: String,
+    value: Value,
 }
 
 impl Column {
     pub(crate) fn new(name: String, value: Value) -> Self {
         Self { name, value }
+    }
+
+    /// Return the name of the column.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Return the value of the column.
+    pub fn value(&self) -> &Value {
+        &self.value
     }
 }
 
