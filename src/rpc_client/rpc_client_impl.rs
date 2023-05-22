@@ -19,8 +19,8 @@ use tonic::{
 };
 
 use crate::{
+    config::RpcConfig,
     errors::{Error, Result, ServerError},
-    options::RpcConfig,
     rpc_client::{RpcClient, RpcClientFactory, RpcContext},
     util::is_ok,
 };

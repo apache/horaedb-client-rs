@@ -1,6 +1,6 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-//! Write request and some useful tools for it
+//! Write request and some useful tools for it.
 
 use std::collections::HashMap;
 
@@ -47,7 +47,7 @@ pub mod pb_builder {
 
     type TagsKey = Vec<u8>;
 
-    /// Used to build [WriteRequestPb] from [Request].
+    /// Used to build [`WriteRequestPb`](WriteTableRequestPb) from [Request].
     pub struct WriteTableRequestPbsBuilder(pub Request);
 
     impl WriteTableRequestPbsBuilder {

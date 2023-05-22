@@ -6,7 +6,7 @@ use std::fmt::Display;
 
 use crate::model::sql_query::response::Response;
 
-/// Display [SqlQueryResponse] in csv format.
+/// Display [`SqlQueryResponse`](Response) in csv format.
 pub struct CsvFormatter {
     pub resp: Response,
 }
