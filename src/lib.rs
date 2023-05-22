@@ -27,6 +27,11 @@
 //! Here is an example to create a table in CeresDB by the client.
 //!
 //! ```rust,no_run
+//! # use futures::prelude::*;
+//!
+//! # use ceresdb_client::{Builder, Mode, RpcContext, SqlQueryRequest};
+//! # fn main() {
+//! # futures::executor::block_on(async {
 //! let client = Builder::new("127.0.0.1:8831".to_string(), Mode::Direct).build();
 //! let rpc_ctx = RpcContext::default().database("public".to_string());
 //!
@@ -46,11 +51,13 @@
 //!     sql: create_table_sql.to_string(),
 //! };
 //! let resp = client
-//!     .sql_query(rpc_ctx, &req)
+//!     .sql_query(&rpc_ctx, &req)
 //!     .await
 //!     .expect("Should succeed to create table");
 //!
 //! println!("Create table result:{:?}", resp);
+//! # });
+//! # }
 //! ```
 
 mod config;
