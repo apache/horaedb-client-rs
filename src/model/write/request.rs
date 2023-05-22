@@ -6,13 +6,15 @@ use std::collections::HashMap;
 
 use crate::model::write::point::Point;
 
-/// Write request
+/// Write request.
 #[derive(Clone, Debug, Default)]
 pub struct Request {
+    /// The points of different tables.
     pub point_groups: HashMap<String, Vec<Point>>,
 }
 
 impl Request {
+    /// Add one point to the request.
     pub fn add_point(&mut self, point: Point) -> &mut Self {
         let points = self
             .point_groups
@@ -23,6 +25,7 @@ impl Request {
         self
     }
 
+    /// Add a batch points to the request.
     pub fn add_points(&mut self, points: Vec<Point>) -> &mut Self {
         for point in points {
             self.add_point(point);

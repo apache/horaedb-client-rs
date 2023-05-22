@@ -2,7 +2,7 @@
 
 use ceresdbproto::storage::WriteResponse as WriteResponsePb;
 
-/// The write response for the [`WriteRequest`](crate::model::write::Request).
+/// The response for the [`WriteRequest`](crate::model::write::Request).
 #[derive(Clone, Debug)]
 pub struct Response {
     /// The number of the rows written successfully.

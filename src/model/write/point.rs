@@ -14,6 +14,7 @@ pub fn is_reserved_column_name(name: &str) -> bool {
     name.eq_ignore_ascii_case(TSID) || name.eq_ignore_ascii_case(TIMESTAMP)
 }
 
+/// One point in the [`WriteRequest`](crate::WriteRequest).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Point {
     pub table: String,
@@ -22,6 +23,7 @@ pub struct Point {
     pub fields: BTreeMap<String, Value>,
 }
 
+/// Builder for building a point.
 #[derive(Debug)]
 pub struct PointBuilder {
     table: String,
@@ -43,11 +45,13 @@ impl PointBuilder {
         }
     }
 
+    /// Set the table name for the point.
     pub fn table(mut self, table: String) -> Self {
         self.table = table;
         self
     }
 
+    /// Set the timestamp for the point.
     pub fn timestamp(mut self, timestamp: i64) -> Self {
         self.timestamp = Some(timestamp);
         self
@@ -66,6 +70,7 @@ impl PointBuilder {
         self
     }
 
+    /// Set the name and value of a field specified by its `name`.
     pub fn field(mut self, name: String, value: Value) -> Self {
         if is_reserved_column_name(&name) {
             self.contains_reserved_column_name = true;
@@ -75,6 +80,7 @@ impl PointBuilder {
         self
     }
 
+    /// Build the final point.
     pub fn build(self) -> Result<Point, String> {
         if self.contains_reserved_column_name {
             return Err("Tag or field name reserved column name in ceresdb".to_string());
