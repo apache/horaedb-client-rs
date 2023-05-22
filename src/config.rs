@@ -4,7 +4,7 @@
 
 use std::time::Duration;
 
-/// Config for the underlying grpc client.
+/// Config for the underlying grpc client
 #[derive(Debug, Clone)]
 pub struct RpcConfig {
     /// Thread num used by the grpc client.

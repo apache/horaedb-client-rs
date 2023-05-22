@@ -5,9 +5,9 @@ use ceresdbproto::storage::WriteResponse as WriteResponsePb;
 /// The response for the [`WriteRequest`](crate::model::write::Request).
 #[derive(Clone, Debug)]
 pub struct Response {
-    /// The number of the rows written successfully.
+    /// The number of the rows written successfully
     pub success: u32,
-    /// The number of the rows which fail to write.
+    /// The number of the rows which fail to write
     pub failed: u32,
 }
 

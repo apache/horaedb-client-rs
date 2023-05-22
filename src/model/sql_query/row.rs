@@ -52,7 +52,7 @@ impl Column {
         &self.name
     }
 
-    /// Return the `Value` of the column.
+    /// Return the [`Value`] of the column.
     pub fn value(&self) -> &Value {
         &self.value
     }
