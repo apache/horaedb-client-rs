@@ -1,6 +1,6 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-//! Client interface
+//! This module provides the definition and implementations of the `DbClient`.
 
 mod builder;
 mod inner;

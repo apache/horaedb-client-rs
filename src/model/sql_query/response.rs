@@ -15,9 +15,12 @@ use crate::{
     model::sql_query::row::{Row, RowBuilder},
 };
 
+/// The response for [`SqlQueryRequest`](crate::model::sql_query::Request).
 #[derive(Debug, Default)]
 pub struct Response {
+    /// The affected rows by the query sql.
     pub affected_rows: u32,
+    /// The rows of the sql result.
     pub rows: Vec<Row>,
 }
 

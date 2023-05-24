@@ -15,6 +15,8 @@ use paste::paste;
 
 use crate::{model::value::Value, Error, Result};
 
+/// A row in the
+/// [`SqlQueryResponse`](crate::model::sql_query::Response).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Row {
     // It is better to iterate in a fixed order, also can save memory.
@@ -22,15 +24,18 @@ pub struct Row {
 }
 
 impl Row {
+    /// Find the [`Column`] by the column name.
     pub fn column(&self, name: &str) -> Option<&Column> {
         self.columns.iter().find(|column| column.name == name)
     }
 
+    /// Get the slice of all the columns.
     pub fn columns(&self) -> &[Column] {
         &self.columns
     }
 }
 
+/// A column in the [`Row`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct Column {
     name: String,
@@ -47,7 +52,7 @@ impl Column {
         &self.name
     }
 
-    /// Return the value of the column.
+    /// Return the [`Value`] of the column.
     pub fn value(&self) -> &Value {
         &self.value
     }

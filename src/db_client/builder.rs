@@ -10,24 +10,20 @@ use crate::{
     RpcConfig,
 };
 
-/// Client mode
-///
-/// + In `Direct` mode, request will be sent to corresponding endpoint
-/// directly(maybe need to get the target endpoint by route request first).
-/// + In `Proxy` mode, request will be sent to proxy server responsible for
-/// forwarding the request.
+/// Access mode to CeresDB server(s).
 #[derive(Debug, Clone)]
 pub enum Mode {
+    /// When accessing CeresDB cluster by `Direct` mode, the requests will be
+    /// sent directly to the right CeresDB instance determined by routing
+    /// information.
     Direct,
+    /// When accessing CeresDB by `Proxy` mode, the requests are just sent to
+    /// any one CeresDB instance, which takes the responsibilities for
+    /// forwarding the requests.
     Proxy,
 }
 
-/// Client builder, has standalone mode and route based mode.
-///
-/// You should define the mode in [`new`],
-/// and it cannot be changed after.
-///
-/// [`new`]: Builder::new
+/// The builder for building [`DbClient`](DbClient).
 #[derive(Debug, Clone)]
 pub struct Builder {
     mode: Mode,

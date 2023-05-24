@@ -1,17 +1,12 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-//! [Value] used in client
-
 use std::any::Any;
 
-// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 use ceresdbproto::storage::{value, Value as ValuePb};
 
 pub type TimestampMs = i64;
 
-/// Value in client
-///
-/// NOTICE: funciont `as_xxx` only support the auto conversion from
+/// The value enum to express the data in CeresDB.
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Value {
     Null,
@@ -284,6 +279,7 @@ impl From<ValuePb> for Value {
     }
 }
 
+/// The data type supported by CeresDB.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DataType {
     Null = 0,
