@@ -1,6 +1,6 @@
 [package]
 name = "ceresdb-client"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["CeresDB Authors <ceresdbservice@gmail.com>"]
 edition = "2021"
 repository = "https://github.com/CeresDB/ceresdb-client-rs"
@@ -9,9 +9,9 @@ description = "Rust implementation of CeresDB client."
 readme = "README.md"
 
 [dependencies]
-arrow = "23.0.0"
+arrow = "38.0.0"
 async-trait = "0.1.57"
-ceresdbproto = "1.0.1"
+ceresdbproto = "1.0.4"
 dashmap = "5.3.4"
 futures = "0.3"
 paste = "1.0"

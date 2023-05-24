@@ -132,7 +132,7 @@ impl RpcClientImplFactory {
 
     #[inline]
     fn make_endpoint_with_scheme(endpoint: &str) -> String {
-        format!("http://{}", endpoint)
+        format!("http://{endpoint}")
     }
 }
 

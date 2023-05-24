@@ -159,7 +159,7 @@ mod test {
             source: source_error as _,
         };
         assert_eq!(
-            &format!("{}", connect_error),
+            &format!("{connect_error}"),
             r#"failed to connect, addr:"1.1.1.1:1111", err:Unknown("unknown error")"#
         );
     }

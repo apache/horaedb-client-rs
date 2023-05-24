@@ -204,8 +204,7 @@ impl RowBuilder {
             // Encounter unsupported type.
             _ => {
                 return Err(Error::BuildRows(format!(
-                    "Unsupported arrow type:{}",
-                    arrow_type
+                    "Unsupported arrow type:{arrow_type}",
                 )));
             }
         }
