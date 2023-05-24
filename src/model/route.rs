@@ -42,7 +42,7 @@ impl FromStr for Endpoint {
         }
 
         let port = raw_port.parse().map_err(|e| {
-            let err_msg = format!("Fail to parse port:{}, err:{}", raw_port, e);
+            let err_msg = format!("Fail to parse port:{raw_port}, err:{e}");
             Self::Err::from(err_msg)
         })?;
         if port > u16::MAX as u32 {

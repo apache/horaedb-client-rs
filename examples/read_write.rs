@@ -32,7 +32,7 @@ async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
         .sql_query(rpc_ctx, &req)
         .await
         .expect("Should succeed to create table");
-    println!("Create table result:{:?}", resp);
+    println!("Create table result:{resp:?}");
 }
 
 async fn drop_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
@@ -99,7 +99,7 @@ async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
         .write(rpc_ctx, &write_req)
         .await
         .expect("Should success to write");
-    println!("{:?}", res);
+    println!("{res:?}");
 }
 
 async fn sql_query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
@@ -112,7 +112,7 @@ async fn sql_query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
         .await
         .expect("Should succeed to query");
     let csv_formatter = CsvFormatter { resp };
-    println!("Rows in the resp:\n{}", csv_formatter);
+    println!("Rows in the resp:\n{csv_formatter}");
 }
 
 #[tokio::main]

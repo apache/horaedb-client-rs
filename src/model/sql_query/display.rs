@@ -23,7 +23,7 @@ impl Display for CsvFormatter {
                 .map(|col| col.name().to_string())
                 .collect::<Vec<_>>();
             for col_name in &col_names {
-                f.write_fmt(format_args!("{},", col_name))?;
+                f.write_fmt(format_args!("{col_name},"))?;
             }
             f.write_str("\n")?;
 
