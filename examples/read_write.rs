@@ -54,41 +54,23 @@ async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let test_table = "ceresdb";
 
     let points = vec![
-        PointBuilder::new(test_table.to_string())
+        PointBuilder::new(test_table)
             .timestamp(ts1)
-            .tag("str_tag".to_string(), Value::String("tag_val1".to_string()))
-            .tag("int_tag".to_string(), Value::Int32(42))
-            .tag(
-                "var_tag".to_string(),
-                Value::Varbinary(b"tag_bin_val1".to_vec()),
-            )
-            .field(
-                "str_field".to_string(),
-                Value::String("field_val1".to_string()),
-            )
+            .tag("str_tag", Value::String("tag_val1".to_string()))
+            .tag("int_tag", Value::Int32(42))
+            .tag("var_tag", Value::Varbinary(b"tag_bin_val1".to_vec()))
+            .field("str_field", Value::String("field_val1".to_string()))
             .field("int_field".to_string(), Value::Int32(42))
-            .field(
-                "bin_field".to_string(),
-                Value::Varbinary(b"field_bin_val1".to_vec()),
-            )
+            .field("bin_field", Value::Varbinary(b"field_bin_val1".to_vec()))
             .build()
             .unwrap(),
-        PointBuilder::new(test_table.to_string())
+        PointBuilder::new(test_table)
             .timestamp(ts1 + 40)
-            .tag("str_tag".to_string(), Value::String("tag_val2".to_string()))
-            .tag("int_tag".to_string(), Value::Int32(43))
-            .tag(
-                "var_tag".to_string(),
-                Value::Varbinary(b"tag_bin_val2".to_vec()),
-            )
-            .field(
-                "str_field".to_string(),
-                Value::String("field_val2".to_string()),
-            )
-            .field(
-                "bin_field".to_string(),
-                Value::Varbinary(b"field_bin_val2".to_vec()),
-            )
+            .tag("str_tag", Value::String("tag_val2".to_string()))
+            .tag("int_tag", Value::Int32(43))
+            .tag("var_tag", Value::Varbinary(b"tag_bin_val2".to_vec()))
+            .field("str_field", Value::String("field_val2".to_string()))
+            .field("bin_field", Value::Varbinary(b"field_bin_val2".to_vec()))
             .build()
             .unwrap(),
     ];
