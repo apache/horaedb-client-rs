@@ -4,10 +4,9 @@
 
 use arrow::{
     array::{
-        ArrayAccessor, ArrayRef, AsArray, BinaryArray, BooleanArray, DictionaryArray, Float32Array,
-        Float64Array, Int16Array, Int32Array, Int64Array, Int8Array, StringArray,
-        Time32MillisecondArray, TimestampMillisecondArray, UInt16Array, UInt32Array, UInt64Array,
-        UInt8Array,
+        ArrayAccessor, ArrayRef, AsArray, BinaryArray, BooleanArray, Float32Array, Float64Array,
+        Int16Array, Int32Array, Int64Array, Int8Array, StringArray, Time32MillisecondArray,
+        TimestampMillisecondArray, UInt16Array, UInt32Array, UInt64Array, UInt8Array,
     },
     datatypes::{DataType, Int32Type, TimeUnit},
     record_batch::RecordBatch,
@@ -263,7 +262,7 @@ mod test {
         let timestamp_array = TimestampMillisecondArray::from(timestamp_values.clone());
         let timestamp32_array = Time32MillisecondArray::from(timestamp32_values.clone());
         let string_dictionary_array: DictionaryArray<Int32Type> =
-            string_values.clone().iter().map(|s| s.as_str()).collect();
+            string_values.iter().map(|s| s.as_str()).collect();
         let schema = Schema::new(vec![
             Field::new("int", DataType::Int32, false),
             Field::new("string", DataType::Utf8, false),
