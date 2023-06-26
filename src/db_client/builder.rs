@@ -44,8 +44,8 @@ impl Builder {
     }
 
     #[inline]
-    pub fn default_database(mut self, default_database: String) -> Self {
-        self.default_database = Some(default_database);
+    pub fn default_database(mut self, default_database: impl Into<String>) -> Self {
+        self.default_database = Some(default_database.into());
         self
     }
 
