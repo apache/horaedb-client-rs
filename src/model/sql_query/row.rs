@@ -4,11 +4,11 @@
 
 use arrow::{
     array::{
-        ArrayRef, BinaryArray, BooleanArray, Float32Array, Float64Array, Int16Array, Int32Array,
-        Int64Array, Int8Array, StringArray, Time32MillisecondArray, TimestampMillisecondArray,
-        UInt16Array, UInt32Array, UInt64Array, UInt8Array,
+        ArrayAccessor, ArrayRef, AsArray, BinaryArray, BooleanArray, Float32Array, Float64Array,
+        Int16Array, Int32Array, Int64Array, Int8Array, StringArray, Time32MillisecondArray,
+        TimestampMillisecondArray, UInt16Array, UInt32Array, UInt64Array, UInt8Array,
     },
-    datatypes::{DataType, TimeUnit},
+    datatypes::{DataType, Int32Type, TimeUnit},
     record_batch::RecordBatch,
 };
 use paste::paste;
@@ -201,6 +201,22 @@ impl RowBuilder {
                     *col = Value::Timestamp(value as i64)
                 }
             }
+            DataType::Dictionary(index_type, encode_type)
+                if index_type.as_ref() == &DataType::Int32
+                    && encode_type.as_ref() == &DataType::Utf8 =>
+            {
+                let row_count = rows.len();
+                let cast_arrow_column = arrow_column
+                    .as_dictionary::<Int32Type>()
+                    .downcast_dict::<StringArray>()
+                    .unwrap();
+                for row_idx in 0..row_count {
+                    let value = cast_arrow_column.value(row_idx).to_owned();
+                    let row = rows.get_mut(row_idx).unwrap();
+                    let col = row.get_mut(col_idx).unwrap();
+                    *col = Value::String(value)
+                }
+            }
             // Encounter unsupported type.
             _ => {
                 return Err(Error::BuildRows(format!(
@@ -218,9 +234,10 @@ mod test {
 
     use arrow::{
         array::{
-            BinaryArray, Int32Array, StringArray, Time32MillisecondArray, TimestampMillisecondArray,
+            BinaryArray, DictionaryArray, Int32Array, StringArray, Time32MillisecondArray,
+            TimestampMillisecondArray,
         },
-        datatypes::{DataType, Field, Schema},
+        datatypes::{DataType, Field, Int32Type, Schema},
         record_batch::RecordBatch,
     };
 
@@ -244,6 +261,8 @@ mod test {
         let binary_array = BinaryArray::from(binary_values.clone());
         let timestamp_array = TimestampMillisecondArray::from(timestamp_values.clone());
         let timestamp32_array = Time32MillisecondArray::from(timestamp32_values.clone());
+        let string_dictionary_array: DictionaryArray<Int32Type> =
+            string_values.iter().map(|s| s.as_str()).collect();
         let schema = Schema::new(vec![
             Field::new("int", DataType::Int32, false),
             Field::new("string", DataType::Utf8, false),
@@ -258,6 +277,11 @@ mod test {
                 DataType::Time32(arrow::datatypes::TimeUnit::Millisecond),
                 false,
             ),
+            Field::new(
+                "string_dictionary",
+                DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
+                true,
+            ),
         ]);
         let arrow_batch = RecordBatch::try_new(
             Arc::new(schema),
@@ -267,6 +291,7 @@ mod test {
                 Arc::new(binary_array),
                 Arc::new(timestamp_array),
                 Arc::new(timestamp32_array),
+                Arc::new(string_dictionary_array),
             ],
         )
         .unwrap();
@@ -300,6 +325,10 @@ mod test {
                 Column::new("varbinary".to_string(), binary_col_values[0].clone()),
                 Column::new("timestamp".to_string(), timestamp_col_values[0].clone()),
                 Column::new("timestamp32".to_string(), timestamp32_col_values[0].clone()),
+                Column::new(
+                    "string_dictionary".to_string(),
+                    string_col_values[0].clone(),
+                ),
             ],
         };
         let row2 = Row {
@@ -309,6 +338,10 @@ mod test {
                 Column::new("varbinary".to_string(), binary_col_values[1].clone()),
                 Column::new("timestamp".to_string(), timestamp_col_values[1].clone()),
                 Column::new("timestamp32".to_string(), timestamp32_col_values[1].clone()),
+                Column::new(
+                    "string_dictionary".to_string(),
+                    string_col_values[1].clone(),
+                ),
             ],
         };
         let row3 = Row {
@@ -318,6 +351,10 @@ mod test {
                 Column::new("varbinary".to_string(), binary_col_values[2].clone()),
                 Column::new("timestamp".to_string(), timestamp_col_values[2].clone()),
                 Column::new("timestamp32".to_string(), timestamp32_col_values[2].clone()),
+                Column::new(
+                    "string_dictionary".to_string(),
+                    string_col_values[2].clone(),
+                ),
             ],
         };
         let expected_rows = vec![row1, row2, row3];
