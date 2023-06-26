@@ -202,8 +202,8 @@ impl RowBuilder {
                 }
             }
             DataType::Dictionary(index_type, encode_type)
-                if *encode_type == Box::new(DataType::Utf8)
-                    && *index_type == Box::new(DataType::Int32) =>
+                if index_type.as_ref() == &DataType::Int32
+                    && encode_type.as_ref() == &DataType::Utf8 =>
             {
                 let row_count = rows.len();
                 let cast_arrow_column = arrow_column
