@@ -35,9 +35,9 @@ pub struct PointBuilder {
 }
 
 impl PointBuilder {
-    pub fn new(table: String) -> Self {
+    pub fn new(table: impl Into<String>) -> Self {
         Self {
-            table,
+            table: table.into(),
             timestamp: None,
             tags: BTreeMap::new(),
             fields: BTreeMap::new(),
@@ -46,8 +46,8 @@ impl PointBuilder {
     }
 
     /// Set the table name for the point.
-    pub fn table(mut self, table: String) -> Self {
-        self.table = table;
+    pub fn table(mut self, table: impl Into<String>) -> Self {
+        self.table = table.into();
         self
     }
 
@@ -61,7 +61,8 @@ impl PointBuilder {
     ///
     /// You cannot set tag with name like 'timestamp' or 'tsid',
     /// because they are keywords in ceresdb.
-    pub fn tag(mut self, name: String, value: Value) -> Self {
+    pub fn tag(mut self, name: impl Into<String>, value: Value) -> Self {
+        let name = name.into();
         if is_reserved_column_name(&name) {
             self.contains_reserved_column_name = true;
         }
@@ -71,7 +72,8 @@ impl PointBuilder {
     }
 
     /// Set the name and value of a field specified by its `name`.
-    pub fn field(mut self, name: String, value: Value) -> Self {
+    pub fn field(mut self, name: impl Into<String>, value: Value) -> Self {
+        let name = name.into();
         if is_reserved_column_name(&name) {
             self.contains_reserved_column_name = true;
         }
