@@ -10,3 +10,6 @@ clippy:
 
 test:
 	cd $(DIR); cargo test --workspace -- --test-threads=4
+
+check-cargo-toml:
+	cd $(DIR); cargo sort --workspace --check

@@ -22,76 +22,50 @@ env:
 
 jobs:
   style-check:
-    name: Libraries Style Check
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Build Environment
-        run: |
-          sudo apt update
-          sudo apt install --yes cmake
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt
-      - name: Run
-        run: |
-          make fmt
-
-  clippy:
-    name: Clippy
+    name: style-check
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v3
-      - name: Cache Rust dependencies
-        uses: actions/cache@v3
         with:
-          path: |
-            ~/.cargo
-            ./target
-          key: ${{ runner.os }}-cache
+          submodules: true
       - name: Setup Build Environment
         run: |
           sudo apt update
-          sudo apt install --yes gcc g++ libssl-dev pkg-config cmake
+          sudo apt install --yes protobuf-compiler
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: nightly-2023-08-28
           override: true
-          components: clippy
-      - name: Run Clippy
+          components: clippy, rustfmt
+      - name: Install cargo binaries
+        run: |
+          cargo install cargo-sort
+      - name: Run Style Check
         run: |
           make clippy
+          make fmt
+          make check-cargo-toml
 
   test:
-    name: Test
+    name: test
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v3
-      - name: Cache Rust dependencies
-        uses: actions/cache@v3
         with:
-          path: |
-            ~/.cargo
-            ./target
-          key: ${{ runner.os }}-cache
+          submodules: true
       - name: Setup Build Environment
         run: |
           sudo apt update
-          sudo apt install --yes gcc g++ libssl-dev pkg-config cmake
+          sudo apt install --yes protobuf-compiler
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: nightly-2023-08-28
           override: true
       - name: Run Test
         run: |

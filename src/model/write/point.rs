@@ -60,7 +60,7 @@ impl PointBuilder {
     /// Set tag name and value of the write entry.
     ///
     /// You cannot set tag with name like 'timestamp' or 'tsid',
-    /// because they are keywords in ceresdb.
+    /// because they are keywords in horaedb.
     pub fn tag(mut self, name: impl Into<String>, value: Value) -> Self {
         let name = name.into();
         if is_reserved_column_name(&name) {
@@ -85,7 +85,7 @@ impl PointBuilder {
     /// Build the final point.
     pub fn build(self) -> Result<Point, String> {
         if self.contains_reserved_column_name {
-            return Err("Tag or field name reserved column name in ceresdb".to_string());
+            return Err("Tag or field name reserved column name in horaedb".to_string());
         }
 
         if self.fields.is_empty() {

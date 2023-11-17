@@ -6,7 +6,7 @@ use ceresdbproto::storage::{value, Value as ValuePb};
 
 pub type TimestampMs = i64;
 
-/// The value enum to express the data in CeresDB.
+/// The value enum to express the data in HoraeDB.
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Value {
     Null,
@@ -279,7 +279,7 @@ impl From<ValuePb> for Value {
     }
 }
 
-/// The data type supported by CeresDB.
+/// The data type supported by HoraeDB.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DataType {
     Null = 0,
