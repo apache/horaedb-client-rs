@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use chrono::Local;
 use horaedb_client::{
     db_client::{Builder, DbClient, Mode},
     model::{
@@ -11,7 +12,6 @@ use horaedb_client::{
     },
     RpcContext,
 };
-use chrono::Local;
 
 async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let create_table_sql = r#"CREATE TABLE IF NOT EXISTS horaedb (
