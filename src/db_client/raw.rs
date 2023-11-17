@@ -1,4 +1,4 @@
-// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
+// Copyright 2022 HoraeDB Project Authors. Licensed under Apache-2.0.
 
 //! Client for standalone mode
 
@@ -16,7 +16,7 @@ use crate::{
     Result,
 };
 
-/// Client for ceresdb of standalone mode.
+/// Client for horaedb of standalone mode.
 ///
 /// Now, [`RawImpl`] just wraps [`InnerClient`] simply.
 pub struct RawImpl<F: RpcClientFactory> {

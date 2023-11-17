@@ -1,4 +1,4 @@
-// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
+// Copyright 2022 HoraeDB Project Authors. Licensed under Apache-2.0.
 
 //! Model for route
 
@@ -75,7 +75,7 @@ mod tests {
         let normal_cases = vec![
             ("127.0.0.1:80", "127.0.0.1", 80),
             ("hello.world.com:1080", "hello.world.com", 1080),
-            ("ceresdb.io:8831", "ceresdb.io", 8831),
+            ("horaedb.io:8831", "horaedb.io", 8831),
         ];
 
         for (raw_endpoint, addr, port) in normal_cases {

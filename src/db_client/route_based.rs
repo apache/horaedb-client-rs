@@ -1,4 +1,4 @@
-// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
+// Copyright 2022 HoraeDB Project Authors. Licensed under Apache-2.0.
 
 //! Client for route based mode
 
@@ -23,7 +23,7 @@ use crate::{
     Error, Result,
 };
 
-/// Client implementation for ceresdb while using route based mode.
+/// Client implementation for horaedb while using route based mode.
 pub struct RouteBasedImpl<F: RpcClientFactory> {
     factory: Arc<F>,
     router_endpoint: String,

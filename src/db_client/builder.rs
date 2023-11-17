@@ -1,4 +1,4 @@
-// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
+// Copyright 2022 HoraeDB Project Authors. Licensed under Apache-2.0.
 
 //! Client builder
 
@@ -10,15 +10,15 @@ use crate::{
     RpcConfig,
 };
 
-/// Access mode to CeresDB server(s).
+/// Access mode to HoraeDB server(s).
 #[derive(Debug, Clone)]
 pub enum Mode {
-    /// When accessing CeresDB cluster by `Direct` mode, the requests will be
-    /// sent directly to the right CeresDB instance determined by routing
+    /// When accessing HoraeDB cluster by `Direct` mode, the requests will be
+    /// sent directly to the right HoraeDB instance determined by routing
     /// information.
     Direct,
-    /// When accessing CeresDB by `Proxy` mode, the requests are just sent to
-    /// any one CeresDB instance, which takes the responsibilities for
+    /// When accessing HoraeDB by `Proxy` mode, the requests are just sent to
+    /// any one HoraeDB instance, which takes the responsibilities for
     /// forwarding the requests.
     Proxy,
 }

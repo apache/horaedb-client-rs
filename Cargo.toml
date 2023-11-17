@@ -1,11 +1,11 @@
 [package]
-name = "ceresdb-client"
+name = "horaedb-client"
 version = "1.0.2"
-authors = ["CeresDB Authors <ceresdbservice@gmail.com>"]
+authors = ["HoraeDB Authors <ceresdbservice@gmail.com>"]
 edition = "2021"
-repository = "https://github.com/CeresDB/ceresdb-client-rs"
+repository = "https://github.com/CeresDB/horaedb-client-rs"
 license = "Apache-2.0"
-description = "Rust implementation of CeresDB client."
+description = "Rust implementation of HoraeDB client."
 readme = "README.md"
 
 [dependencies]
@@ -25,4 +25,4 @@ chrono = "0.4"
 tokio = { version = "1.15", features = ["full"] }
 
 [lib]
-name = "ceresdb_client"
+name = "horaedb_client"

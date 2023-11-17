@@ -1,8 +1,8 @@
-// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
+// Copyright 2022 HoraeDB Project Authors. Licensed under Apache-2.0.
 
 use std::sync::Arc;
 
-use ceresdb_client::{
+use horaedb_client::{
     db_client::{Builder, DbClient, Mode},
     model::{
         sql_query::{display::CsvFormatter, Request as SqlQueryRequest},
@@ -14,7 +14,7 @@ use ceresdb_client::{
 use chrono::Local;
 
 async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
-    let create_table_sql = r#"CREATE TABLE IF NOT EXISTS ceresdb (
+    let create_table_sql = r#"CREATE TABLE IF NOT EXISTS horaedb (
                 str_tag string TAG,
                 int_tag int32 TAG,
                 var_tag varbinary TAG,
@@ -25,7 +25,7 @@ async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
                 TIMESTAMP KEY(t)) ENGINE=Analytic with
 (enable_ttl='false')"#;
     let req = SqlQueryRequest {
-        tables: vec!["ceresdb".to_string()],
+        tables: vec!["horaedb".to_string()],
         sql: create_table_sql.to_string(),
     };
     let resp = client
@@ -36,9 +36,9 @@ async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 }
 
 async fn drop_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
-    let drop_table_sql = "DROP TABLE ceresdb";
+    let drop_table_sql = "DROP TABLE horaedb";
     let req = SqlQueryRequest {
-        tables: vec!["ceresdb".to_string()],
+        tables: vec!["horaedb".to_string()],
         sql: drop_table_sql.to_string(),
     };
     let _resp = client
@@ -51,7 +51,7 @@ async fn drop_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let ts1 = Local::now().timestamp_millis();
     let mut write_req = WriteRequest::default();
-    let test_table = "ceresdb";
+    let test_table = "horaedb";
 
     let points = vec![
         PointBuilder::new(test_table)
@@ -86,8 +86,8 @@ async fn write(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 
 async fn sql_query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
     let req = SqlQueryRequest {
-        tables: vec!["ceresdb".to_string()],
-        sql: "select * from ceresdb;".to_string(),
+        tables: vec!["horaedb".to_string()],
+        sql: "select * from horaedb;".to_string(),
     };
     let resp = client
         .sql_query(rpc_ctx, &req)
@@ -99,7 +99,7 @@ async fn sql_query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 
 #[tokio::main]
 async fn main() {
-    // you should ensure ceresdb is running, and grpc port is set to 8831
+    // you should ensure horaedb is running, and grpc port is set to 8831
     let client = Builder::new("127.0.0.1:8831".to_string(), Mode::Direct).build();
     let rpc_ctx = RpcContext::default().database("public".to_string());
 
