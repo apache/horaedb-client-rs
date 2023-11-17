@@ -1,4 +1,4 @@
-// Copyright 2022 HoraeDB Project Authors. Licensed under Apache-2.0.
+// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
 //! This crate provides an user-friendly client for [HoraeDB ](https://github.com/HoraeDB /horaedb).
 //!

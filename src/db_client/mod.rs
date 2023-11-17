@@ -1,4 +1,4 @@
-// Copyright 2022 HoraeDB Project Authors. Licensed under Apache-2.0.
+// Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
 //! This module provides the definition and implementations of the `DbClient`.
 

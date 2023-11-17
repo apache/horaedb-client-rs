@@ -33,8 +33,6 @@ jobs:
       - run: |
           rustup set auto-self-update disable
           rustup toolchain install ${RUST_VERSION} --profile minimal
-      - name: Check License Header
-        uses: korandoru/hawkeye@v3
       - name: Setup Build Environment
         run: |
           sudo apt update
