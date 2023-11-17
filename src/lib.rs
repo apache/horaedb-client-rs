@@ -1,6 +1,6 @@
 // Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
 
-//! This crate provides an user-friendly client for [HoraeDB ](https://github.com/HoraeDB /horaedb).
+//! This crate provides an user-friendly client for [HoraeDB](https://github.com/HoraeDB /horaedb).
 //!
 //! With this crate, you can access a standalone HoraeDB or a HoraeDB cluster
 //! and manipulates the data in it. And the underlying communication between the
