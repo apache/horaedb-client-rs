@@ -103,7 +103,7 @@ impl<F: RpcClientFactory> DbClient for RouteBasedImpl<F> {
         let mut partition_by_endpoint = HashMap::new();
         endpoints
             .into_iter()
-            .zip(should_routes.into_iter())
+            .zip(should_routes)
             .for_each(|(ep, m)| match ep {
                 Some(ep) => {
                     let write_req = partition_by_endpoint
@@ -140,7 +140,7 @@ impl<F: RpcClientFactory> DbClient for RouteBasedImpl<F> {
         let mut tables_result_pairs: Vec<_> = join_all(futures)
             .await
             .into_iter()
-            .zip(write_tables.into_iter())
+            .zip(write_tables)
             .map(|(results, tables)| (tables, results))
             .collect();
 

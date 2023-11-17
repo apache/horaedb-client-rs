@@ -16,10 +16,7 @@ pub struct Request {
 impl Request {
     /// Add one point to the request.
     pub fn add_point(&mut self, point: Point) -> &mut Self {
-        let points = self
-            .point_groups
-            .entry(point.table.clone())
-            .or_insert_with(Vec::new);
+        let points = self.point_groups.entry(point.table.clone()).or_default();
         points.push(point);
 
         self
