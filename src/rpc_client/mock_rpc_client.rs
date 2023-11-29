@@ -15,13 +15,13 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use dashmap::DashMap;
 use horaedbproto::storage::{
     Endpoint as EndpointPb, Route as RoutePb, RouteRequest as RouteRequestPb,
     RouteResponse as RouteResponsePb, SqlQueryRequest as QueryRequestPb,
     SqlQueryResponse as QueryResponsePb, WriteRequest as WriteRequestPb,
     WriteResponse as WriteResponsePb,
 };
-use dashmap::DashMap;
 
 use crate::{
     model::route::Endpoint,
