@@ -1,4 +1,16 @@
-# Copyright 2022 CeresDB Project Authors. Licensed under Apache-2.0.
+# Copyright 2023 The HoraeDB Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 name: CI
 
@@ -29,25 +41,13 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
+      - uses: Swatinem/rust-cache@v2
       - name: Setup Build Environment
-        run: |
-          sudo apt update
-          sudo apt install --yes protobuf-compiler
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly-2023-08-28
-          override: true
-          components: clippy, rustfmt
+        run: sudo apt update && sudo apt install -y protobuf-compiler
       - name: Install cargo binaries
-        run: |
-          cargo install cargo-sort
+        run: cargo install cargo-sort
       - name: Run Style Check
-        run: |
-          make clippy
-          make fmt
-          make check-cargo-toml
+        run: make fmt clippy check-toml
 
   test:
     name: test
@@ -57,16 +57,10 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
+      - uses: Swatinem/rust-cache@v2
       - name: Setup Build Environment
         run: |
           sudo apt update
           sudo apt install --yes protobuf-compiler
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly-2023-08-28
-          override: true
       - name: Run Test
-        run: |
-          make test
+        run: make test

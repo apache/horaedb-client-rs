@@ -1,7 +1,21 @@
+# Copyright 2023 The HoraeDB Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 [package]
 name = "horaedb-client"
 version = "1.0.2"
-authors = ["HoraeDB Authors <ceresdbservice@gmail.com>"]
+authors = ["HoraeDB Authors"]
 edition = "2021"
 repository = "https://github.com/CeresDB/horaedb-client-rs"
 license = "Apache-2.0"
@@ -11,9 +25,9 @@ readme = "README.md"
 [dependencies]
 arrow = "38.0.0"
 async-trait = "0.1.72"
-ceresdbproto = "1.0.4"
 dashmap = "5.3.4"
 futures = "0.3"
+horaedbproto = "1.0.23"
 paste = "1.0"
 thiserror = "1.0.38"
 tokio = "1.29"

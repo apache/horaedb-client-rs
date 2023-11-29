@@ -1,7 +1,7 @@
 # HoraeDB Rust Client
 
 ![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)
-[![Crates.io](https://img.shields.io/crates/v/ceresdb-client.svg)](https://crates.io/crates/ceresdb-client)
+[![Crates.io](https://img.shields.io/crates/v/horaedb-client.svg)](https://crates.io/crates/horaedb-client)
 
 ## Introduction
 
@@ -18,14 +18,8 @@ HoraeDB is a high-performance, distributed, schema-less, cloud native time-serie
 
 Any contribution is welcome!
 
-Read our [Contributing Guide](https://github.com/CeresDB/ceresdb/blob/main/CONTRIBUTING.md) and make your first contribution!
+Read our [Contributing Guide](https://github.com/CeresDB/horaedb/blob/main/CONTRIBUTING.md) and make your first contribution!
 
 ## License
 
-Under [Apache License 2.0](./LICENSE).
-
-## Community and support
-
-- Join the user group on [Slack](https://join.slack.com/t/ceresdbcommunity/shared_invite/zt-1au1ihbdy-5huC9J9s2462yBMIWmerTw)
-- Join the user group on WeChat [WeChat QR code](https://github.com/CeresDB/assets/blob/main/WeChatQRCode.jpg)
-- Join the user group on DingTalk: 44602802
+Under [Apache License 2.0](LICENSE).
