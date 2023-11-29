@@ -43,16 +43,11 @@ jobs:
           submodules: true
       - uses: Swatinem/rust-cache@v2
       - name: Setup Build Environment
-        run: |
-          sudo apt update
-          sudo apt install --yes protobuf-compiler
+        run: sudo apt update && sudo apt install -y protobuf-compiler
       - name: Install cargo binaries
         run: cargo install cargo-sort
       - name: Run Style Check
-        run: |
-          cargo fmt --all --check
-          cargo clippy --tests --all-features --all-targets --workspace -- -D warnings
-          cargo sort --workspace --check
+        run: make fmt clippy check-toml
 
   test:
     name: test
@@ -68,4 +63,4 @@ jobs:
           sudo apt update
           sudo apt install --yes protobuf-compiler
       - name: Run Test
-        run: cargo test --workspace
+        run: make test
