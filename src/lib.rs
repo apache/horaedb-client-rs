@@ -16,7 +16,8 @@
 //!
 //! With this crate, you can access a standalone HoraeDB or a HoraeDB cluster
 //! and manipulates the data in it. And the underlying communication between the
-//! client the HoraeDB servers is based on the gRPC, and the protocol is defined in the [ceresdbproto](https://github.com/HoraeDB /ceresdbproto).
+//! client the HoraeDB servers is based on the gRPC, and the protocol is defined in the
+//! [horaedbproto](https://github.com/CeresDB/horaedbproto).
 //!
 //! ## Choose Mode
 //!

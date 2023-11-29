@@ -14,7 +14,7 @@
 
 use std::{fmt::Display, str::FromStr};
 
-use ceresdbproto::storage::Endpoint as EndPointPb;
+use horaedbproto::storage::Endpoint as EndPointPb;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Endpoint {

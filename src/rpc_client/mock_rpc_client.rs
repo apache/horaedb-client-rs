@@ -15,7 +15,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use ceresdbproto::storage::{
+use horaedbproto::storage::{
     Endpoint as EndpointPb, Route as RoutePb, RouteRequest as RouteRequestPb,
     RouteResponse as RouteResponsePb, SqlQueryRequest as QueryRequestPb,
     SqlQueryResponse as QueryResponsePb, WriteRequest as WriteRequestPb,

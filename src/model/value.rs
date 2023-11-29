@@ -14,7 +14,7 @@
 
 use std::any::Any;
 
-use ceresdbproto::storage::{value, Value as ValuePb};
+use horaedbproto::storage::{value, Value as ValuePb};
 
 pub type TimestampMs = i64;
 

@@ -15,7 +15,7 @@
 use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
-use ceresdbproto::{
+use horaedbproto::{
     common::ResponseHeader,
     storage::{
         storage_service_client::StorageServiceClient, RouteRequest as RouteRequestPb,

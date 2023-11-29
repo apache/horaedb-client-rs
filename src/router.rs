@@ -15,7 +15,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
-use ceresdbproto::storage::{self, RouteRequest};
+use horaedbproto::storage::{self, RouteRequest};
 use dashmap::DashMap;
 
 use crate::{

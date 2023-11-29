@@ -14,7 +14,7 @@
 
 use std::sync::Arc;
 
-use ceresdbproto::storage;
+use horaedbproto::storage;
 use tokio::sync::OnceCell;
 
 use crate::{

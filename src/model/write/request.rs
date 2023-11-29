@@ -45,7 +45,7 @@ impl Request {
 pub mod pb_builder {
     use std::collections::{BTreeMap, HashMap};
 
-    use ceresdbproto::storage::{
+    use horaedbproto::storage::{
         Field, FieldGroup as FieldGroupPb, Tag as TagPb, WriteSeriesEntry as WriteSeriesEntryPb,
         WriteTableRequest as WriteTableRequestPb,
     };
