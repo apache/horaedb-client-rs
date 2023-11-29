@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! This module provides the definition and implementations of the `DbClient`.
+
 mod builder;
 mod inner;
 mod raw;
