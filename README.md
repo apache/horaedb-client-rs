@@ -18,7 +18,7 @@ HoraeDB is a high-performance, distributed, schema-less, cloud native time-serie
 
 Any contribution is welcome!
 
-Read our [Contributing Guide](https://github.com/CeresDB/horaedb/blob/main/CONTRIBUTING.md) and make your first contribution!
+Read our [Contributing Guide](https://github.com/apache/incubator-horaedb/blob/main/CONTRIBUTING.md) and make your first contribution!
 
 ## License
 
