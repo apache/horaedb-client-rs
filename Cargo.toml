@@ -23,8 +23,11 @@ description = "Rust implementation of HoraeDB client."
 readme = "README.md"
 
 [dependencies]
+anyhow = "1.0.83"
 arrow = "38.0.0"
 async-trait = "0.1.72"
+base64 = "0.22.1"
+bytes = "1.6.0"
 dashmap = "5.3.4"
 futures = "0.3"
 horaedbproto = "1.0.23"

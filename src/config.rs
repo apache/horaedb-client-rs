@@ -54,6 +54,15 @@ pub struct RpcConfig {
     ///
     /// Default value is 3s.
     pub connect_timeout: Duration,
+
+    /// Authorization for rpc.
+    pub authorization: Option<Authorization>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Authorization {
+    pub username: String,
+    pub password: String,
 }
 
 impl Default for RpcConfig {
@@ -70,6 +79,7 @@ impl Default for RpcConfig {
             default_write_timeout: Duration::from_secs(5),
             default_sql_query_timeout: Duration::from_secs(60),
             connect_timeout: Duration::from_secs(3),
+            authorization: None,
         }
     }
 }

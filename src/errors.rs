@@ -66,6 +66,12 @@ pub enum Error {
 
     #[error("failed to find a database")]
     NoDatabase,
+
+    #[error(transparent)]
+    Other {
+        #[from]
+        source: anyhow::Error,
+    },
 }
 
 #[derive(Debug)]
