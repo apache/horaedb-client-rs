@@ -17,7 +17,7 @@ use std::sync::Arc;
 use crate::{
     db_client::{raw::RawImpl, route_based::RouteBasedImpl, DbClient},
     rpc_client::RpcClientImplFactory,
-    RpcConfig,
+    Authorization, RpcConfig,
 };
 
 /// Access mode to HoraeDB server(s).
@@ -40,6 +40,7 @@ pub struct Builder {
     endpoint: String,
     default_database: Option<String>,
     rpc_config: RpcConfig,
+    authorization: Option<Authorization>,
 }
 
 impl Builder {
@@ -50,6 +51,7 @@ impl Builder {
             endpoint,
             rpc_config: RpcConfig::default(),
             default_database: None,
+            authorization: None,
         }
     }
 
@@ -65,8 +67,17 @@ impl Builder {
         self
     }
 
+    #[inline]
+    pub fn authorization(mut self, authorization: Authorization) -> Self {
+        self.authorization = Some(authorization);
+        self
+    }
+
     pub fn build(self) -> Arc<dyn DbClient> {
-        let rpc_client_factory = Arc::new(RpcClientImplFactory::new(self.rpc_config));
+        let rpc_client_factory = Arc::new(RpcClientImplFactory::new(
+            self.rpc_config,
+            self.authorization,
+        ));
 
         match self.mode {
             Mode::Direct => Arc::new(RouteBasedImpl::new(

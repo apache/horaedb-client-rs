@@ -36,6 +36,7 @@ use crate::{
     errors::{Error, Result, ServerError},
     rpc_client::{RpcClient, RpcClientFactory, RpcContext},
     util::is_ok,
+    Authorization,
 };
 
 struct RpcClientImpl {
@@ -142,11 +143,15 @@ impl RpcClient for RpcClientImpl {
 
 pub struct RpcClientImplFactory {
     rpc_config: RpcConfig,
+    authorization: Option<Authorization>,
 }
 
 impl RpcClientImplFactory {
-    pub fn new(rpc_config: RpcConfig) -> Self {
-        Self { rpc_config }
+    pub fn new(rpc_config: RpcConfig, authorization: Option<Authorization>) -> Self {
+        Self {
+            rpc_config,
+            authorization,
+        }
     }
 
     #[inline]
@@ -184,7 +189,7 @@ impl RpcClientFactory for RpcClientImplFactory {
                 source: Box::new(e),
             })?;
 
-        let metadata = if let Some(auth) = &self.rpc_config.authorization {
+        let metadata = if let Some(auth) = &self.authorization {
             let mut buf = Vec::with_capacity(auth.username.len() + auth.password.len() + 1);
             buf.extend_from_slice(auth.username.as_bytes());
             buf.push(b':');
