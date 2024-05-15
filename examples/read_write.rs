@@ -22,7 +22,7 @@ use horaedb_client::{
         value::Value,
         write::{point::PointBuilder, Request as WriteRequest},
     },
-    RpcContext,
+    Authorization, RpcConfig, RpcContext,
 };
 
 async fn create_table(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
@@ -112,7 +112,15 @@ async fn sql_query(client: &Arc<dyn DbClient>, rpc_ctx: &RpcContext) {
 #[tokio::main]
 async fn main() {
     // you should ensure horaedb is running, and grpc port is set to 8831
-    let client = Builder::new("127.0.0.1:8831".to_string(), Mode::Direct).build();
+    let mut rpc_config = RpcConfig::default();
+    // Set authorization if needed
+    rpc_config.authorization = Some(Authorization {
+        username: "user".to_string(),
+        password: "pass".to_string(),
+    });
+    let client = Builder::new("127.0.0.1:8831".to_string(), Mode::Direct)
+        .rpc_config(rpc_config)
+        .build();
     let rpc_ctx = RpcContext::default().database("public".to_string());
 
     println!("------------------------------------------------------------------");
