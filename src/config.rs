@@ -56,6 +56,12 @@ pub struct RpcConfig {
     pub connect_timeout: Duration,
 }
 
+#[derive(Debug, Clone)]
+pub struct Authorization {
+    pub username: String,
+    pub password: String,
+}
+
 impl Default for RpcConfig {
     fn default() -> Self {
         Self {

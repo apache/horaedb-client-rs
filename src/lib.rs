@@ -85,7 +85,7 @@ mod util;
 
 #[doc(inline)]
 pub use crate::{
-    config::RpcConfig,
+    config::{Authorization, RpcConfig},
     db_client::{Builder, DbClient, Mode},
     errors::{Error, Result},
     model::{

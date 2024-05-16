@@ -14,7 +14,9 @@
 
 use std::{sync::Arc, time::Duration};
 
+use anyhow::Context;
 use async_trait::async_trait;
+use base64::{prelude::BASE64_STANDARD, Engine};
 use horaedbproto::{
     common::ResponseHeader,
     storage::{
@@ -24,6 +26,7 @@ use horaedbproto::{
     },
 };
 use tonic::{
+    metadata::{Ascii, MetadataValue},
     transport::{Channel, Endpoint},
     Request,
 };
@@ -33,12 +36,14 @@ use crate::{
     errors::{Error, Result, ServerError},
     rpc_client::{RpcClient, RpcClientFactory, RpcContext},
     util::is_ok,
+    Authorization,
 };
 
 struct RpcClientImpl {
     channel: Channel,
     default_read_timeout: Duration,
     default_write_timeout: Duration,
+    metadata: Option<MetadataValue<Ascii>>,
 }
 
 impl RpcClientImpl {
@@ -46,11 +51,13 @@ impl RpcClientImpl {
         channel: Channel,
         default_read_timeout: Duration,
         default_write_timeout: Duration,
+        metadata: Option<MetadataValue<Ascii>>,
     ) -> Self {
         Self {
             channel,
             default_read_timeout,
             default_write_timeout,
+            metadata,
         }
     }
 
@@ -65,19 +72,22 @@ impl RpcClientImpl {
         Ok(())
     }
 
-    fn make_request<T>(ctx: &RpcContext, req: T, default_timeout: Duration) -> Request<T> {
+    fn make_request<T>(&self, ctx: &RpcContext, req: T, default_timeout: Duration) -> Request<T> {
         let timeout = ctx.timeout.unwrap_or(default_timeout);
         let mut req = Request::new(req);
         req.set_timeout(timeout);
+        if let Some(md) = &self.metadata {
+            req.metadata_mut().insert("authorization", md.clone());
+        }
         req
     }
 
     fn make_query_request<T>(&self, ctx: &RpcContext, req: T) -> Request<T> {
-        Self::make_request(ctx, req, self.default_read_timeout)
+        self.make_request(ctx, req, self.default_read_timeout)
     }
 
     fn make_write_request<T>(&self, ctx: &RpcContext, req: T) -> Request<T> {
-        Self::make_request(ctx, req, self.default_write_timeout)
+        self.make_request(ctx, req, self.default_write_timeout)
     }
 }
 
@@ -119,7 +129,7 @@ impl RpcClient for RpcClientImpl {
         let mut client = StorageServiceClient::<Channel>::new(self.channel.clone());
 
         // use the write timeout for the route request.
-        let route_req = Self::make_request(ctx, req, self.default_write_timeout);
+        let route_req = self.make_request(ctx, req, self.default_write_timeout);
         let resp = client.route(route_req).await.map_err(Error::Rpc)?;
         let mut resp = resp.into_inner();
 
@@ -133,11 +143,15 @@ impl RpcClient for RpcClientImpl {
 
 pub struct RpcClientImplFactory {
     rpc_config: RpcConfig,
+    authorization: Option<Authorization>,
 }
 
 impl RpcClientImplFactory {
-    pub fn new(rpc_config: RpcConfig) -> Self {
-        Self { rpc_config }
+    pub fn new(rpc_config: RpcConfig, authorization: Option<Authorization>) -> Self {
+        Self {
+            rpc_config,
+            authorization,
+        }
     }
 
     #[inline]
@@ -174,10 +188,26 @@ impl RpcClientFactory for RpcClientImplFactory {
                 addr: endpoint,
                 source: Box::new(e),
             })?;
+
+        let metadata = if let Some(auth) = &self.authorization {
+            let mut buf = Vec::with_capacity(auth.username.len() + auth.password.len() + 1);
+            buf.extend_from_slice(auth.username.as_bytes());
+            buf.push(b':');
+            buf.extend_from_slice(auth.password.as_bytes());
+            let auth = BASE64_STANDARD.encode(&buf);
+            let metadata: MetadataValue<Ascii> = format!("Basic {}", auth)
+                .parse()
+                .context("invalid grpc metadata")?;
+
+            Some(metadata)
+        } else {
+            None
+        };
         Ok(Arc::new(RpcClientImpl::new(
             channel,
             self.rpc_config.default_sql_query_timeout,
             self.rpc_config.default_write_timeout,
+            metadata,
         )))
     }
 }
