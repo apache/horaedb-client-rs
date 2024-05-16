@@ -19,7 +19,7 @@
 
 github:
   description: >-
-    Rust implementation of HoraeDB client.
+    Apache HoraeDB (Incubating) Rust Client.
   homepage: https://apache.github.io/incubator-horaedb-docs # TODO: after website is ready, set to https://horaedb.apache.org/
   labels:
     - rust
