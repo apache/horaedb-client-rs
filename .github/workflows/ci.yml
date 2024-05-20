@@ -45,6 +45,8 @@ jobs:
         with:
           submodules: true
       - uses: Swatinem/rust-cache@v2
+      - name: Check License Header
+        uses: korandoru/hawkeye@v5
       - name: Setup Build Environment
         run: sudo apt update && sudo apt install -y protobuf-compiler
       - name: Install cargo binaries
