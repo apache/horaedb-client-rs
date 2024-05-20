@@ -13,3 +13,6 @@ test:
 
 check-toml:
 	cd $(DIR); cargo sort --workspace --check
+
+dry-run:
+	cd $(DIR); cargo publish --dry-run --registry crates-io
