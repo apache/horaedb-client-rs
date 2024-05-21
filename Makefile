@@ -16,3 +16,6 @@ check-toml:
 
 dry-run:
 	cd $(DIR); cargo publish --dry-run --registry crates-io
+
+list-deps:
+	cd $(DIR); cargo deny list -f tsv -l crate > DEPENDENCIES.tsv

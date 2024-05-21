@@ -1,0 +1,224 @@
+crate	0BSD	Apache-2.0	Apache-2.0 WITH LLVM-exception	BSD-3-Clause	BSL-1.0	CC0-1.0	MIT	Unicode-DFS-2016	Unlicense	Zlib
+addr2line@0.21.0		X					X			
+adler@1.0.2	X	X					X			
+ahash@0.8.3		X					X			
+aho-corasick@1.0.1							X		X	
+android_system_properties@0.1.5		X					X			
+anyhow@1.0.83		X					X			
+arrow@38.0.0		X								
+arrow-arith@38.0.0		X								
+arrow-array@38.0.0		X								
+arrow-buffer@38.0.0		X								
+arrow-cast@38.0.0		X								
+arrow-csv@38.0.0		X								
+arrow-data@38.0.0		X								
+arrow-ipc@38.0.0		X								
+arrow-json@38.0.0		X								
+arrow-ord@38.0.0		X								
+arrow-row@38.0.0		X								
+arrow-schema@38.0.0		X								
+arrow-select@38.0.0		X								
+arrow-string@38.0.0		X								
+async-stream@0.3.5							X			
+async-stream-impl@0.3.5							X			
+async-trait@0.1.74		X					X			
+autocfg@1.1.0		X					X			
+axum@0.6.18							X			
+axum-core@0.3.4							X			
+backtrace@0.3.69		X					X			
+base64@0.13.1		X					X			
+base64@0.22.1		X					X			
+bitflags@1.3.2		X					X			
+bumpalo@3.13.0		X					X			
+bytes@1.6.0							X			
+cc@1.0.79		X					X			
+cfg-if@1.0.0		X					X			
+chrono@0.4.24		X					X			
+const-random@0.1.15		X					X			
+const-random-macro@0.1.15		X					X			
+core-foundation-sys@0.8.4		X					X			
+crunchy@0.2.2							X			
+csv@1.2.1							X		X	
+csv-core@0.1.10							X		X	
+dashmap@5.4.0							X			
+either@1.8.1		X					X			
+errno@0.3.1		X					X			
+errno-dragonfly@0.1.2							X			
+fastrand@1.9.0		X					X			
+fixedbitset@0.4.2		X					X			
+flatbuffers@23.1.21		X								
+fnv@1.0.7		X					X			
+futures@0.3.28		X					X			
+futures-channel@0.3.28		X					X			
+futures-core@0.3.28		X					X			
+futures-executor@0.3.28		X					X			
+futures-io@0.3.28		X					X			
+futures-macro@0.3.28		X					X			
+futures-sink@0.3.28		X					X			
+futures-task@0.3.28		X					X			
+futures-util@0.3.28		X					X			
+getrandom@0.2.9		X					X			
+gimli@0.28.0		X					X			
+h2@0.3.19							X			
+half@2.2.1		X					X			
+hashbrown@0.12.3		X					X			
+hashbrown@0.13.2		X					X			
+heck@0.4.1		X					X			
+hermit-abi@0.2.6		X					X			
+hermit-abi@0.3.1		X					X			
+horaedb-client@2.0.0		X								
+horaedbproto@1.0.23		X								
+http@0.2.9		X					X			
+http-body@0.4.5							X			
+httparse@1.8.0		X					X			
+httpdate@1.0.2		X					X			
+hyper@0.14.26							X			
+hyper-timeout@0.4.1		X					X			
+iana-time-zone@0.1.56		X					X			
+iana-time-zone-haiku@0.1.2		X					X			
+indexmap@1.9.3		X					X			
+instant@0.1.12				X						
+io-lifetimes@1.0.10		X	X				X			
+itertools@0.10.5		X					X			
+itoa@1.0.6		X					X			
+jobserver@0.1.26		X					X			
+js-sys@0.3.63		X					X			
+lazy_static@1.4.0		X					X			
+lexical-core@0.8.5		X					X			
+lexical-parse-float@0.8.5		X					X			
+lexical-parse-integer@0.8.6		X					X			
+lexical-util@0.8.5		X					X			
+lexical-write-float@0.8.5		X					X			
+lexical-write-integer@0.8.5		X					X			
+libc@0.2.150		X					X			
+libm@0.2.7		X					X			
+linux-raw-sys@0.3.8		X	X				X			
+lock_api@0.4.9		X					X			
+log@0.4.17		X					X			
+matchit@0.7.0							X			
+memchr@2.5.0							X		X	
+mime@0.3.17		X					X			
+miniz_oxide@0.7.1		X					X			X
+mio@0.8.9							X			
+multimap@0.8.3		X					X			
+num@0.4.0		X					X			
+num-bigint@0.4.3		X					X			
+num-complex@0.4.3		X					X			
+num-integer@0.1.45		X					X			
+num-iter@0.1.43		X					X			
+num-rational@0.4.1		X					X			
+num-traits@0.2.15		X					X			
+num_cpus@1.15.0		X					X			
+object@0.32.1		X					X			
+once_cell@1.17.1		X					X			
+parking_lot@0.12.1		X					X			
+parking_lot_core@0.9.7		X					X			
+paste@1.0.12		X					X			
+percent-encoding@2.2.0		X					X			
+petgraph@0.6.3		X					X			
+pin-project@1.1.0		X					X			
+pin-project-internal@1.1.0		X					X			
+pin-project-lite@0.2.13		X					X			
+pin-utils@0.1.0		X					X			
+pkg-config@0.3.27		X					X			
+ppv-lite86@0.2.17		X					X			
+prettyplease@0.1.25		X					X			
+proc-macro-hack@0.5.20+deprecated		X					X			
+proc-macro2@1.0.69		X					X			
+prost@0.11.9		X								
+prost-build@0.11.9		X								
+prost-derive@0.11.9		X								
+prost-types@0.11.9		X								
+protoc-bin-vendored@3.0.0							X			
+protoc-bin-vendored-linux-aarch_64@3.0.0							X			
+protoc-bin-vendored-linux-ppcle_64@3.0.0							X			
+protoc-bin-vendored-linux-x86_32@3.0.0							X			
+protoc-bin-vendored-linux-x86_64@3.0.0							X			
+protoc-bin-vendored-macos-x86_64@3.0.0							X			
+protoc-bin-vendored-win32@3.0.0							X			
+quote@1.0.33		X					X			
+rand@0.8.5		X					X			
+rand_chacha@0.3.1		X					X			
+rand_core@0.6.4		X					X			
+redox_syscall@0.2.16							X			
+redox_syscall@0.3.5							X			
+regex@1.8.2		X					X			
+regex-syntax@0.6.29		X					X			
+regex-syntax@0.7.2		X					X			
+rustc-demangle@0.1.23		X					X			
+rustc_version@0.4.0		X					X			
+rustix@0.37.19		X	X				X			
+rustversion@1.0.12		X					X			
+ryu@1.0.13		X			X					
+same-file@1.0.6							X		X	
+scopeguard@1.1.0		X					X			
+semver@1.0.17		X					X			
+serde@1.0.163		X					X			
+serde_json@1.0.96		X					X			
+signal-hook-registry@1.4.1		X					X			
+slab@0.4.8							X			
+smallvec@1.10.0		X					X			
+socket2@0.4.9		X					X			
+socket2@0.5.5		X					X			
+static_assertions@1.1.0		X					X			
+syn@1.0.109		X					X			
+syn@2.0.39		X					X			
+sync_wrapper@0.1.2		X								
+tempfile@3.5.0		X					X			
+thiserror@1.0.40		X					X			
+thiserror-impl@1.0.40		X					X			
+time@0.1.45		X					X			
+tiny-keccak@2.0.2						X				
+tokio@1.34.0							X			
+tokio-io-timeout@1.2.0		X					X			
+tokio-macros@2.2.0							X			
+tokio-stream@0.1.14							X			
+tokio-util@0.7.8							X			
+tonic@0.8.3							X			
+tonic-build@0.8.4							X			
+tower@0.4.13							X			
+tower-layer@0.3.2							X			
+tower-service@0.3.2							X			
+tracing@0.1.37							X			
+tracing-attributes@0.1.24							X			
+tracing-core@0.1.31							X			
+tracing-futures@0.2.5							X			
+try-lock@0.2.4							X			
+unicode-ident@1.0.8		X					X	X		
+version_check@0.9.4		X					X			
+walkdir@2.3.3							X		X	
+want@0.3.0							X			
+wasi@0.10.0+wasi-snapshot-preview1		X	X				X			
+wasi@0.11.0+wasi-snapshot-preview1		X	X				X			
+wasm-bindgen@0.2.86		X					X			
+wasm-bindgen-backend@0.2.86		X					X			
+wasm-bindgen-macro@0.2.86		X					X			
+wasm-bindgen-macro-support@0.2.86		X					X			
+wasm-bindgen-shared@0.2.86		X					X			
+which@4.4.0							X			
+winapi@0.3.9		X					X			
+winapi-i686-pc-windows-gnu@0.4.0		X					X			
+winapi-util@0.1.5							X		X	
+winapi-x86_64-pc-windows-gnu@0.4.0		X					X			
+windows@0.48.0		X					X			
+windows-sys@0.45.0		X					X			
+windows-sys@0.48.0		X					X			
+windows-targets@0.42.2		X					X			
+windows-targets@0.48.0		X					X			
+windows_aarch64_gnullvm@0.42.2		X					X			
+windows_aarch64_gnullvm@0.48.0		X					X			
+windows_aarch64_msvc@0.42.2		X					X			
+windows_aarch64_msvc@0.48.0		X					X			
+windows_i686_gnu@0.42.2		X					X			
+windows_i686_gnu@0.48.0		X					X			
+windows_i686_msvc@0.42.2		X					X			
+windows_i686_msvc@0.48.0		X					X			
+windows_x86_64_gnu@0.42.2		X					X			
+windows_x86_64_gnu@0.48.0		X					X			
+windows_x86_64_gnullvm@0.42.2		X					X			
+windows_x86_64_gnullvm@0.48.0		X					X			
+windows_x86_64_msvc@0.42.2		X					X			
+windows_x86_64_msvc@0.48.0		X					X			
+zstd@0.12.3+zstd.1.5.2							X			
+zstd-safe@6.0.5+zstd.1.5.4		X					X			
+zstd-sys@2.0.8+zstd.1.5.5		X					X			
