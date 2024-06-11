@@ -5,7 +5,7 @@
 
 ## Introduction
 
-Rust client for [Apache HoraeDB (Incubating)](https://github.com/apache/incubator-horaedb).
+Rust client for [Apache HoraeDB (Incubating)](https://github.com/apache/horaedb).
 
 > [!IMPORTANT]
 > Apache HoraeDB (incubating) is an effort undergoing incubation at the Apache
@@ -22,7 +22,7 @@ Rust client for [Apache HoraeDB (Incubating)](https://github.com/apache/incubato
 
 Any contribution is welcome!
 
-Read our [Contributing Guide](https://github.com/apache/incubator-horaedb/blob/main/CONTRIBUTING.md) and make your first contribution!
+Read our [Contributing Guide](https://github.com/apache/horaedb/blob/main/CONTRIBUTING.md) and make your first contribution!
 
 ## License
 
