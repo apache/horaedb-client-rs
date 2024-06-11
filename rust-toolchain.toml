@@ -16,6 +16,5 @@
 # under the License.
 
 [toolchain]
-# channel = "nightly-2023-08-28"
 channel = "stable"
 components = ["cargo", "rustfmt", "clippy", "rust-analyzer"]
