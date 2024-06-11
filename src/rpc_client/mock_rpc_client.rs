@@ -62,7 +62,7 @@ impl RpcClient for MockRpcClient {
                     ip: endpoint.addr,
                     port: endpoint.port,
                 };
-                route_pb.table = m.clone();
+                route_pb.table.clone_from(m);
                 route_pb.endpoint = Some(endpoint_pb);
                 Some(route_pb)
             })

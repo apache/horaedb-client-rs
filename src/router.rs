@@ -167,26 +167,26 @@ mod test {
         let tables = vec![table1.clone(), table2.clone()];
         let route_client = RouterImpl::new(default_endpoint.clone(), Arc::new(mock_rpc_client));
         let route_res1 = route_client.route(&tables, &ctx).await.unwrap();
-        assert_eq!(&endpoint1, route_res1.get(0).unwrap().as_ref().unwrap());
+        assert_eq!(&endpoint1, route_res1.first().unwrap().as_ref().unwrap());
         assert_eq!(&endpoint2, route_res1.get(1).unwrap().as_ref().unwrap());
 
         route_table.insert(table1.clone(), endpoint3.clone());
         route_table.insert(table2.clone(), endpoint4.clone());
 
         let route_res2 = route_client.route(&tables, &ctx).await.unwrap();
-        assert_eq!(&endpoint1, route_res2.get(0).unwrap().as_ref().unwrap());
+        assert_eq!(&endpoint1, route_res2.first().unwrap().as_ref().unwrap());
         assert_eq!(&endpoint2, route_res2.get(1).unwrap().as_ref().unwrap());
 
         route_client.evict(&[table1.clone(), table2.clone()]);
 
         let route_res3 = route_client.route(&tables, &ctx).await.unwrap();
-        assert_eq!(&endpoint3, route_res3.get(0).unwrap().as_ref().unwrap());
+        assert_eq!(&endpoint3, route_res3.first().unwrap().as_ref().unwrap());
         assert_eq!(&endpoint4, route_res3.get(1).unwrap().as_ref().unwrap());
 
         let route_res4 = route_client.route(&[table3, table4], &ctx).await.unwrap();
         assert_eq!(
             &default_endpoint,
-            route_res4.get(0).unwrap().as_ref().unwrap()
+            route_res4.first().unwrap().as_ref().unwrap()
         );
         assert_eq!(
             &default_endpoint,
