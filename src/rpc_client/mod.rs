@@ -26,6 +26,7 @@ use horaedbproto::storage::{
     SqlQueryRequest as QueryRequestPb, SqlQueryResponse as QueryResponsePb,
     WriteRequest as WriteRequestPb, WriteResponse as WriteResponsePb,
 };
+#[cfg(test)]
 pub use mock_rpc_client::MockRpcClient;
 pub use rpc_client_impl::RpcClientImplFactory;
 
